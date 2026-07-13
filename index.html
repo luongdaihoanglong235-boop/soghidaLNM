@@ -664,7 +664,15 @@
 
         function addLog(action, details = "") {
             let logs = dbGet('logs');
-            logs.unshift({ time: new Date().toLocaleString('vi-VN'), user: currentUser.username, action, details });
+            const now = new Date();
+            logs.unshift({ 
+                id: "log_" + Date.now().toString() + Math.random().toString(36).substr(2, 5),
+                time: now.toLocaleString('vi-VN'), 
+                timeISO: now.toISOString(),
+                user: currentUser.username, 
+                action, 
+                details 
+            });
             if(logs.length > 200) logs = logs.slice(0, 200);
             dbSet('logs', logs);
             if(currentUser && currentUser.role === 'admin') loadLogs();
@@ -674,7 +682,7 @@
             if (!localStorage.getItem(DB_PREFIX + 'users')) dbSet('users', { 'admin': { username: 'admin', password: 'admin123', fullname: 'Quản Trị Viên', role: 'admin', canDeleteAll: true } });
             if (!localStorage.getItem(DB_PREFIX + 'customers')) dbSet('customers', []);
             if (!localStorage.getItem(DB_PREFIX + 'records')) dbSet('records', []);
-            if (!localStorage.getItem(DB_PREFIX + 'logs')) dbSet('logs', [{time: new Date().toLocaleString('vi-VN'), user: 'Hệ thống', action: 'Khởi tạo hệ thống Lương Ngọc Minh.', details: ''}]);
+            if (!localStorage.getItem(DB_PREFIX + 'logs')) dbSet('logs', [{id: "log_init", time: new Date().toLocaleString('vi-VN'), timeISO: new Date().toISOString(), user: 'Hệ thống', action: 'Khởi tạo hệ thống Lương Ngọc Minh.', details: ''}]);
             if (!localStorage.getItem(DB_PREFIX + 'reconciliations')) dbSet('reconciliations', []); // Data Đối Soát
         }
 
