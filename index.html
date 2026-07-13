@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SỔ GHI ĐÁ LƯƠNG NGỌC MINH</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    <style>
+        :root {
+            --primary: #0f172a; --secondary: #2563eb; --danger: #ef4444; --success: #10b981; --warning: #f59e0b;
+            --background: #f1f5f9; --surface: #ffffff; --text-main: #1e293b; --text-muted: #64748b; --border: #e2e8f0;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--background); color: var(--text-main); display: flex; flex-direction: column; min-height: 100vh; }
+        
+        header { background-color: var(--primary); color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        header h2 { font-size: 1.4rem; display: flex; align-items: center; gap: 10px; text-transform: uppercase; }
+        
+        .btn { padding: 8px 14px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+        .btn:hover { opacity: 0.9; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary { background-color: var(--secondary); color: white; }
+        .btn-danger { background-color: var(--danger); color: white; }
+        .btn-success { background-color: var(--success); color: white; }
+        .btn-warning { background-color: var(--warning); color: white; }
+        .btn-outline { background-color: transparent; border: 1px solid var(--border); color: var(--text-main); }
+        
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; width: 100%; flex: 1; }
+        .hidden { display: none !important; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 2fr; gap: 24px; }
+        @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+        
+        .card { background: var(--surface); padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid var(--border); margin-bottom: 20px; }
+        .card-header { font-size: 1.1rem; font-weight: bold; margin-bottom: 15px; color: var(--primary); border-bottom: 2px solid var(--background); padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center;}
+        
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 600; color: var(--text-main); font-size: 13px; }
+        .form-control { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; outline: none; }
+        .form-control:focus { border-color: var(--secondary); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+        
+        .login-wrapper { display: flex; justify-content: center; align-items: center; min-height: 80vh; }
+        .login-container { max-width: 400px; width: 100%; background: var(--surface); padding: 40px 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-top: 5px solid var(--secondary); }
+        .login-container h2 { text-align: center; color: var(--primary); margin-bottom: 24px; }
+        
+        .tabs-container { background: var(--surface); padding: 10px; border-radius: 12px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .tab-btn { padding: 10px 16px; border-radius: 8px; border: none; background: transparent; cursor: pointer; font-weight: 600; color: var(--text-muted); font-size: 14px;}
+        .tab-btn:hover { background: var(--background); color: var(--text-main); }
+        .tab-btn.active { background: var(--primary); color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        .table-responsive { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+        th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background-color: #f8fafc; font-weight: 600; color: var(--text-muted); text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }
+        tr:hover { background-color: #f8fafc; }
+        .money { font-weight: 700; color: var(--danger); }
+        .badge { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; }
+        .badge-paid { background: #d1fae5; color: #047857; }
+        .badge-unpaid { background: #fee2e2; color: #b91c1c; }
+        
+        .summary-box { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; }
+        .sum-card { flex: 1; min-width: 200px; padding: 20px; background: white; border-radius: 12px; border-left: 4px solid var(--secondary); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .sum-card.danger { border-left-color: var(--danger); }
+        .sum-card.success { border-left-color: var(--success); }
+        .sum-card .label { color: var(--text-muted); font-weight: 600; font-size: 13px; margin-bottom: 5px; display: block; }
+        .sum-card .value { font-size: 24px; font-weight: bold; color: var(--text-main); }
+
+        .ice-pricing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; background: var(--background); padding: 10px; border-radius: 8px; align-items: center;}
+        
+        #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+        .toast { min-width: 250px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-left: 5px solid var(--secondary); display: flex; align-items: center; justify-content: space-between; animation: slideIn 0.3s forwards; }
+        .toast.error { border-left-color: var(--danger); }
+        .toast.success { border-left-color: var(--success); }
+        @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+    </style>
+</head>
+<body>
+
+    <div id="toast-container"></div>
+
+    <header id="main-header" class="hidden">
+        <h2>🧊 SỔ GHI ĐÁ LƯƠNG NGỌC MINH</h2>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <div style="text-align: right; line-height: 1.2;">
+                <div id="user-fullname" style="font-weight: bold; font-size: 14px;"></div>
+                <div id="user-role-badge" style="font-size: 12px; color: #93c5fd;"></div>
+            </div>
+            <button class="btn btn-outline" style="color: white; border-color: rgba(255,255,255,0.3);" onclick="logout()">Đăng xuất</button>
+        </div>
+    </header>
+
+    <div id="login-screen" class="login-wrapper">
+        <div class="login-container">
+            <h2>Hệ Thống Quản Lý Nội Bộ</h2>
+            <form onsubmit="event.preventDefault(); login();">
+                <div class="form-group">
+                    <label>Tên đăng nhập</label>
+                    <input type="text" id="login-username" class="form-control" placeholder="Nhập tài khoản">
+                </div>
+                <div class="form-group">
+                    <label>Mật khẩu</label>
+                    <input type="password" id="login-password" class="form-control" placeholder="Nhập mật khẩu">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 10px; font-size: 15px; margin-top: 10px;">Đăng Nhập</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="main-dashboard" class="container hidden">
+        <div class="tabs-container">
+            <button class="tab-btn active" onclick="switchTab('tab-so-sach')">📝 Sổ Giao Dịch Ngày</button>
+            <button class="tab-btn" onclick="switchTab('tab-bao-cao')">📊 Báo Cáo & Thống Kê</button>
+            <button class="tab-btn admin-only hidden" onclick="switchTab('tab-khach-hang')">🏢 Khách Hàng & Bảng Giá</button>
+            <button class="tab-btn admin-only hidden" onclick="switchTab('tab-nhan-vien')">👥 Quản Lý Nhân Sự</button>
+            <button class="tab-btn admin-only hidden" onclick="switchTab('tab-he-thong')">⚙️ Lịch Sử & Khôi Phục</button>
+            <button class="tab-btn" onclick="switchTab('tab-ca-nhan')">👤 Cá Nhân</button>
+        </div>
+
+        <div id="tab-so-sach" class="tab-content active">
+            <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 15px; margin-bottom: 15px;">
+                <div class="card" style="margin-bottom: 0; padding: 10px 20px; display: flex; align-items: center; gap: 10px;">
+                    <label style="font-weight: 600; color: var(--primary); margin:0;">Xem Sổ Ngày:</label>
+                    <input type="date" id="filter-date" class="form-control" style="width: 160px; padding: 6px;" onchange="loadDailyRecords()">
+                </div>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button class="btn btn-warning" onclick="downloadExcelTemplate()">Tải Mẫu Excel Nhập Liệu</button>
+                    <label class="btn btn-outline" style="cursor: pointer; background: white;">
+                        Nhập từ Excel <input type="file" id="import-excel-file" accept=".xlsx, .xls" class="hidden" onchange="importExcel(event)">
+                    </label>
+                    <button class="btn btn-success" onclick="exportDailyExcel()">📥 Xuất Excel Ngày Này</button>
+                </div>
+            </div>
+
+            <div class="summary-box">
+                <div class="sum-card"><span class="label">Tổng Doanh Số Trong Ngày</span><span class="value" id="day-total">0 đ</span></div>
+                <div class="sum-card success"><span class="label">Đã Thu (Tiền Mặt/CK)</span><span class="value" style="color:var(--success)" id="day-paid">0 đ</span></div>
+                <div class="sum-card danger"><span class="label">Chưa Thanh Toán (Nợ)</span><span class="value" style="color:var(--danger)" id="day-unpaid">0 đ</span></div>
+            </div>
+
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header" id="form-record-title">Tạo Giao Dịch Mới</div>
+                    <form id="record-form" onsubmit="event.preventDefault(); saveRecord();">
+                        <input type="hidden" id="rec-id">
+                        <div class="form-group">
+                            <label>Khách hàng / Đối tác</label>
+                            <select id="rec-customer" class="form-control" required onchange="updateIceTypeDropdown()"></select>
+                        </div>
+                        <div class="grid-2" style="gap: 15px;">
+                            <div class="form-group">
+                                <label>Loại đá</label>
+                                <select id="rec-ice-type" class="form-control" required onchange="updatePriceAndTotal()"></select>
+                            </div>
+                            <div class="form-group">
+                                <label>Đơn giá (đ)</label>
+                                <input type="number" id="rec-price" class="form-control" readonly style="background: var(--background);">
+                            </div>
+                        </div>
+                        <div class="grid-2" style="gap: 15px;">
+                            <div class="form-group">
+                                <label>Số lượng</label>
+                                <input type="number" id="rec-qty" class="form-control" min="1" required oninput="updatePriceAndTotal()">
+                            </div>
+                            <div class="form-group">
+                                <label>Thành tiền (đ)</label>
+                                <input type="number" id="rec-total" class="form-control" readonly style="background: #fef9c3; font-weight: bold; color: var(--danger);">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Trạng thái thanh toán</label>
+                            <select id="rec-status" class="form-control">
+                                <option value="Chưa thanh toán">Chưa thanh toán (Ghi nợ)</option>
+                                <option value="Đã thanh toán">Đã thanh toán (Thu ngay)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Ghi chú (Tùy chọn)</label>
+                            <input type="text" id="rec-note" class="form-control" placeholder="Ví dụ: Đã nhận chuyển khoản...">
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button type="submit" class="btn btn-primary" style="flex: 1;">Lưu Giao Dịch</button>
+                            <button type="button" class="btn btn-outline" id="btn-cancel-edit" onclick="resetRecordForm()" style="display:none;">Hủy</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="card" style="padding: 0;">
+                    <div class="card-header" style="margin: 20px 20px 0 20px;">Chi Tiết Giao Dịch Ngày</div>
+                    <div class="table-responsive" style="padding: 0 20px 20px 20px;">
+                        <table id="table-daily">
+                            <thead>
+                                <tr>
+                                    <th>Khách Hàng</th>
+                                    <th>Loại Đá</th>
+                                    <th>SL</th>
+                                    <th>Thành Tiền</th>
+                                    <th>Trạng Thái</th>
+                                    <th>Ghi Chú</th>
+                                    <th style="width: 120px;">Thao Tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="body-daily"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-bao-cao" class="tab-content">
+            <div class="card">
+                <div class="card-header">Tùy Chọn Báo Cáo</div>
+                <div style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+                    <div class="form-group" style="margin: 0;">
+                        <label>Từ ngày:</label>
+                        <input type="date" id="report-start" class="form-control">
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label>Đến ngày:</label>
+                        <input type="date" id="report-end" class="form-control">
+                    </div>
+                    <button class="btn btn-primary" onclick="generateReport()">Xem Báo Cáo</button>
+                    <button class="btn btn-success" onclick="exportReportExcel()">Xuất Excel Báo Cáo</button>
+                </div>
+            </div>
+
+            <div class="summary-box">
+                <div class="sum-card"><span class="label">Tổng Giao Dịch (Kỳ)</span><span class="value" id="rep-total">0 đ</span></div>
+                <div class="sum-card success"><span class="label">Tổng Đã Thu</span><span class="value" style="color:var(--success)" id="rep-paid">0 đ</span></div>
+                <div class="sum-card danger"><span class="label">Tổng Còn Nợ (Chưa Thu)</span><span class="value" style="color:var(--danger)" id="rep-unpaid">0 đ</span></div>
+            </div>
+
+            <div class="card" style="padding: 0;">
+                <div class="card-header" style="margin: 20px 20px 0 20px;">Công Nợ Chi Tiết Từng Khách Hàng</div>
+                <div class="table-responsive" style="padding: 0 20px 20px 20px;">
+                    <table id="table-report">
+                        <thead>
+                            <tr>
+                                <th>Tên Khách Hàng</th>
+                                <th>Tổng Mua (đ)</th>
+                                <th>Đã Thanh Toán (đ)</th>
+                                <th>Còn Nợ (đ)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="body-report"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-khach-hang" class="tab-content">
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header">Thêm / Sửa Khách Hàng</div>
+                    <form onsubmit="event.preventDefault(); saveCustomer();">
+                        <input type="hidden" id="cust-id">
+                        <div class="form-group">
+                            <label>Tên Khách Hàng / Đối Tác</label>
+                            <input type="text" id="cust-name" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Ghi chú / Địa chỉ</label>
+                            <input type="text" id="cust-note" class="form-control">
+                        </div>
+                        
+                        <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 10px; color: var(--primary);">Thiết lập bảng giá riêng (Chỉ chọn đá khách mua)</label>
+                        
+                        <div class="ice-pricing-grid">
+                            <label><input type="checkbox" id="ice-vien-chk" onchange="toggleIcePrice('vien')"> Đá Viên</label>
+                            <input type="number" id="ice-vien-price" class="form-control" placeholder="Đơn giá" disabled>
+                        </div>
+                        <div class="ice-pricing-grid">
+                            <label><input type="checkbox" id="ice-bi-chk" onchange="toggleIcePrice('bi')"> Đá Bi</label>
+                            <input type="number" id="ice-bi-price" class="form-control" placeholder="Đơn giá" disabled>
+                        </div>
+                        <div class="ice-pricing-grid">
+                            <label><input type="checkbox" id="ice-uop-chk" onchange="toggleIcePrice('uop')"> Đá Ướp</label>
+                            <input type="number" id="ice-uop-price" class="form-control" placeholder="Đơn giá" disabled>
+                        </div>
+                        <div class="ice-pricing-grid">
+                            <label><input type="checkbox" id="ice-ngo-chk" onchange="toggleIcePrice('ngo')"> Đá Ngô</label>
+                            <input type="number" id="ice-ngo-price" class="form-control" placeholder="Đơn giá" disabled>
+                        </div>
+                        <div class="ice-pricing-grid">
+                            <label><input type="checkbox" id="ice-bao-chk" onchange="toggleIcePrice('bao')"> Đá Bào</label>
+                            <input type="number" id="ice-bao-price" class="form-control" placeholder="Đơn giá" disabled>
+                        </div>
+
+                        <div style="display: flex; gap: 10px; margin-top: 15px;">
+                            <button type="submit" class="btn btn-primary" style="flex: 1;">Lưu Thông Tin</button>
+                            <button type="button" class="btn btn-outline" onclick="resetCustForm()">Làm mới form</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="card" style="padding: 0;">
+                    <div class="card-header" style="margin: 20px 20px 0 20px;">Danh Sách Khách Hàng</div>
+                    <div class="table-responsive" style="padding: 0 20px 20px 20px;">
+                        <table id="table-customers">
+                            <thead>
+                                <tr>
+                                    <th>Tên Khách Hàng</th>
+                                    <th>Các Loại Đá & Giá</th>
+                                    <th>Ghi Chú</th>
+                                    <th style="width: 130px;">Thao Tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="body-customers"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-nhan-vien" class="tab-content">
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header">Cấp Tài Khoản Nhân Viên</div>
+                    <form onsubmit="event.preventDefault(); createUser();">
+                        <div class="form-group">
+                            <label>Tên đăng nhập (viết liền)</label>
+                            <input type="text" id="user-username" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Họ và tên</label>
+                            <input type="text" id="new-user-fullname" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Mật khẩu</label>
+                            <input type="text" id="user-password" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Phân quyền:</label>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; background: var(--background); padding: 10px; border-radius: 6px; font-size: 13px;">
+                                <label><input type="checkbox" class="user-perm" value="view_daily" checked> Xem sổ ngày</label>
+                                <label><input type="checkbox" class="user-perm" value="add_record"> Tạo giao dịch</label>
+                                <label><input type="checkbox" class="user-perm" value="edit_record"> Sửa giao dịch</label>
+                                <label><input type="checkbox" class="user-perm" value="delete_record"> Xóa giao dịch</label>
+                                <label><input type="checkbox" class="user-perm" value="view_report"> Xem báo cáo</label>
+                                <label><input type="checkbox" class="user-perm" value="manage_customers"> QL Khách hàng</label>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">Tạo Tài Khoản</button>
+                    </form>
+                </div>
+                <div class="card" style="padding: 0;">
+                    <div class="card-header" style="margin: 20px 20px 0 20px;">Danh Sách Nhân Viên</div>
+                    <div class="table-responsive" style="padding: 0 20px 20px 20px;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Tài Khoản</th>
+                                    <th>Họ Tên</th>
+                                    <th>Mật Khẩu</th>
+                                    <th>Quyền</th>
+                                    <th>Thao Tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="body-users"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-he-thong" class="tab-content">
+            <div class="grid-2">
+                <div class="card" style="padding: 0;">
+                    <div class="card-header" style="margin: 20px 20px 0 20px;">Thùng Rác (Dữ liệu đã xóa)</div>
+                    <div class="table-responsive" style="padding: 0 20px 20px 20px;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Dữ liệu</th>
+                                    <th>Người xóa & Thời gian</th>
+                                    <th>Khôi phục</th>
+                                </tr>
+                            </thead>
+                            <tbody id="body-trash"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card" style="padding: 0;">
+                    <div class="card-header" style="margin: 20px 20px 0 20px;">Nhật Ký Hành Động</div>
+                    <div class="table-responsive" style="padding: 0 20px 20px 20px; max-height: 600px; overflow-y: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Thời Gian</th>
+                                    <th>Người Dùng</th>
+                                    <th>Chi Tiết</th>
+                                </tr>
+                            </thead>
+                            <tbody id="body-logs"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-ca-nhan" class="tab-content">
+            <div class="card" style="max-width: 500px; margin: 0 auto;">
+                <div class="card-header">Đổi Thông Tin Cá Nhân</div>
+                <form onsubmit="event.preventDefault(); updateProfile();">
+                    <div class="form-group">
+                        <label>Họ Tên Hiển Thị</label>
+                        <input type="text" id="profile-fullname" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Đổi mật khẩu (Bỏ trống nếu không đổi)</label>
+                        <input type="password" id="profile-password" class="form-control">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Lưu Thay Đổi</button>
+                </form>
+            </div>
+        </div>
+
+    </div>
+
+  <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-analytics.js";
+        // Import thêm Database để lưu trữ số liệu
+        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDKi9uLQiit1bDYADtkYWzm1I0AHCTCGYA",
+            authDomain: "so-ghi-da.firebaseapp.com",
+            projectId: "so-ghi-da",
+            storageBucket: "so-ghi-da.firebasestorage.app",
+            messagingSenderId: "643776354540",
+            appId: "1:643776354540:web:a3790ca768a7bc5eda6dc9",
+            measurementId: "G-2JXS6RQH92"
+        };
+
+        // Khởi tạo Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const database = getDatabase(app);
+
+        // Biến cục bộ chạy Runtime lưu dữ liệu đồng bộ từ Cloud về
+        window.CLOUD_DATA = { users: {}, customers: [], records: [], logs: [] };
+
+        // Lắng nghe biến động dữ liệu trực tuyến từ Cloud
+        function listenToCloudChanges() {
+            const dbRef = ref(database);
+            onValue(dbRef, (snapshot) => {
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    window.CLOUD_DATA.users = data.users || { 'admin': { username: 'admin', password: 'admin123', fullname: 'Quản Trị Viên', role: 'admin', canDeleteAll: true } };
+                    window.CLOUD_DATA.customers = Object.values(data.customers || {});
+                    window.CLOUD_DATA.records = Object.values(data.records || {});
+                    window.CLOUD_DATA.logs = Object.values(data.logs || {});
+                    
+                    window.CLOUD_DATA.logs.sort((a,b) => new Date(b.timeISO || 0) - new Date(a.timeISO || 0));
+                    
+                    if (window.currentUser) {
+                        window.loadAllData();
+                    }
+                }
+            });
+        }
+
+        // Đẩy dữ liệu từ RAM lên Cloud Database
+        window.dbSet = function(k, v) {
+            if (Array.isArray(v)) {
+                let dataObj = {};
+                v.forEach(item => { if(item && item.id) dataObj[item.id] = item; });
+                set(ref(database, k), dataObj);
+            } else {
+                set(ref(database, k), v);
+            }
+        };
+
+        window.dbGet = function(k) {
+            return window.CLOUD_DATA[k] || [];
+        };
+
+        listenToCloudChanges();
+    </script>
+
+    <script>
+        const ICE_NAMES = { vien: "Đá Viên", bi: "Đá Bi", uop: "Đá Ướp", ngo: "Đá Ngô", bao: "Đá Bào" };
+        const formatMoney = (m) => parseFloat(m || 0).toLocaleString('vi-VN');
+        
+        function dbGet(k) { return window.dbGet(k); }
+        function dbSet(k, v) { window.dbSet(k, v); }
+
+        function hasPermission(perm) {
+            if (!currentUser) return false;
+            if (currentUser.role === 'admin') return true;
+            return currentUser.permissions && currentUser.permissions[perm];
+        }
+
+        function applyStylesToWorksheet(ws) {
+            if (!ws || !ws['!ref']) return;
+            const range = XLSX.utils.decode_range(ws['!ref']);
+            const colWidths = [];
+            for (let col = range.s.c; col <= range.e.c; col++) colWidths[col] = 12;
+
+            for (let row = range.s.r; row <= range.e.r; row++) {
+                const isHeader = (row === range.s.r);
+                for (let col = range.s.c; col <= range.e.c; col++) {
+                    const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
+                    let cell = ws[cellAddress];
+                    if (!cell) { cell = { v: "", t: "s" }; ws[cellAddress] = cell; }
+                    
+                    cell.s = {
+                        font: { name: "Times New Roman", sz: 12, bold: isHeader },
+                        border: {
+                            top: { style: "thin", color: { rgb: "000000" } }, bottom: { style: "thin", color: { rgb: "000000" } },
+                            left: { style: "thin", color: { rgb: "000000" } }, right: { style: "thin", color: { rgb: "000000" } }
+                        },
+                        alignment: { vertical: "center", horizontal: isHeader ? "center" : "left" }
+                    };
+                    
+                    if (isHeader) {
+                        cell.s.fill = { patternType: "solid", fgColor: { rgb: "D9E1F2" } };
+                    } else {
+                        const numVal = parseFloat(cell.v);
+                        if (!isNaN(numVal) && isFinite(cell.v) && typeof cell.v === 'number') {
+                            cell.t = "n"; cell.s.alignment.horizontal = "right";
+                            if (numVal > 1000) cell.s.numFmt = "#,##0";
+                        }
+                    }
+                    
+                    let cellValStr = String(cell.v !== undefined && cell.v !== null ? cell.v : "");
+                    const valLen = cellValStr ? cellValStr.length : 0;
+                    if (valLen + 6 > colWidths[col]) colWidths[col] = valLen + 6;
+                }
+            }
+            ws['!cols'] = colWidths.map(w => ({ wch: w }));
+        }
+
+        const getTodayStr = () => {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        };
+        
+        let currentUser = null, isEditingRecordId = null;
+
+        function showToast(msg, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `<span>${msg}</span><button type="button" style="background:none;border:none;cursor:pointer;font-size:16px;margin-left:10px;" onclick="this.parentElement.remove()">×</button>`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.remove(); }, 3000);
+        }
+
+        function addLog(action, details = "") {
+            let logs = dbGet('logs');
+            logs.unshift({ time: new Date().toLocaleString('vi-VN'), timeISO: new Date().toISOString(), user: currentUser.username, action, details });
+            if(logs.length > 200) logs = logs.slice(0, 200);
+            dbSet('logs', logs);
+        }
+
+        function login() {
+            const u = document.getElementById('login-username').value.trim().toLowerCase();
+            const p = document.getElementById('login-password').value;
+            const users = window.CLOUD_DATA.users;
+
+            if (Object.keys(users).length === 0 && u === 'admin' && p === 'admin123') {
+                let initUsers = {};
+                initUsers['admin'] = { username: 'admin', password: 'admin123', fullname: 'Quản Trị Viên', role: 'admin', canDeleteAll: true };
+                dbSet('users', initUsers);
+                return showToast('Đang khởi tạo hệ thống quản trị, vui lòng bấm đăng nhập lại!', 'warning');
+            }
+
+            if (users[u] && users[u].password === p) {
+                currentUser = users[u]; window.currentUser = currentUser;
+                addLog("Đăng nhập");
+                
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('main-dashboard').classList.remove('hidden');
+                document.getElementById('main-header').classList.remove('hidden');
+                document.getElementById('user-fullname').innerText = currentUser.fullname;
+                document.getElementById('user-role-badge').innerText = currentUser.role === 'admin' ? '⭐ Admin' : '👤 Nhân Viên';
+                
+                document.querySelectorAll('.admin-only').forEach(el => currentUser.role === 'admin' ? el.classList.remove('hidden') : el.classList.add('hidden'));
+                document.getElementById('filter-date').value = getTodayStr();
+                document.getElementById('report-start').value = `${new Date().getFullYear()}-01-01`;
+                document.getElementById('report-end').value = getTodayStr();
+
+                switchTab('tab-so-sach'); showToast(`Chào ${currentUser.fullname}!`);
+            } else {
+                showToast('Tài khoản hoặc mật khẩu không đúng!', 'error');
+            }
+        }
+
+        function logout() {
+            if(currentUser) addLog("Đăng xuất");
+            currentUser = null; window.currentUser = null;
+            document.getElementById('login-username').value = ''; document.getElementById('login-password').value = '';
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('main-dashboard').classList.add('hidden'); document.getElementById('main-header').classList.add('hidden');
+        }
+
+        function switchTab(tabId) {
+            if (tabId === 'tab-bao-cao' && !hasPermission('view_report')) return showToast('Bạn không có quyền xem Báo cáo', 'error');
+            if (tabId === 'tab-khach-hang' && !hasPermission('manage_customers')) return showToast('Bạn không có quyền quản lý khách hàng', 'error');
+            
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            
+            const buttons = document.querySelectorAll('.tab-btn');
+            for(let btn of buttons) if(btn.getAttribute('onclick').includes(tabId)) { btn.classList.add('active'); break; }
+            loadAllData();
+        }
+
+        function window_loadAllData() {
+            loadCustomers(); loadDailyRecords();
+            if(document.getElementById('tab-bao-cao').classList.contains('active')) generateReport();
+            document.getElementById('profile-fullname').value = currentUser.fullname;
+            if (currentUser.role === 'admin') { loadUsers(); loadLogs(); loadTrash(); }
+        }
+        window.loadAllData = window_loadAllData;
+
+        function toggleIcePrice(type) {
+            const chk = document.getElementById(`ice-${type}-chk`).checked;
+            document.getElementById(`ice-${type}-price`).disabled = !chk;
+            if(!chk) document.getElementById(`ice-${type}-price`).value = '';
+        }
+
+        function saveCustomer() {
+            const id = document.getElementById('cust-id').value, name = document.getElementById('cust-name').value.trim(), note = document.getElementById('cust-note').value.trim();
+            if(!name) return showToast('Vui lòng nhập tên!', 'error');
+            const prices = {}; let hasIce = false;
+            ['vien', 'bi', 'uop', 'ngo', 'bao'].forEach(type => {
+                if(document.getElementById(`ice-${type}-chk`).checked) {
+                    const p = document.getElementById(`ice-${type}-price`).value;
+                    if(p && p > 0) { prices[type] = parseFloat(p); hasIce = true; }
+                }
+            });
+            if(!hasIce) return showToast('Phải chọn ít nhất 1 loại đá và nhập giá!', 'error');
+            let customers = dbGet('customers');
+            if (id) {
+                let idx = customers.findIndex(c => c.id == id);
+                if(idx > -1) { addLog("Sửa khách hàng", `${customers[idx].name} -> ${name}`); customers[idx] = { ...customers[idx], name, note, prices }; }
+            } else {
+                if(customers.find(c => c.name.toLowerCase() === name.toLowerCase() && !c.isDeleted)) return showToast('Khách hàng đã tồn tại!', 'error');
+                customers.push({ id: Date.now().toString(), name, note, prices, isDeleted: false });
+                addLog("Thêm khách hàng", `Thêm mới KH: ${name}`);
+            }
+            dbSet('customers', customers); showToast('Lưu khách hàng thành công!'); resetCustForm(); loadCustomers();
+        }
+
+        function resetCustForm() {
+            document.getElementById('cust-id').value = ''; document.getElementById('cust-name').value = ''; document.getElementById('cust-note').value = '';
+            ['vien', 'bi', 'uop', 'ngo', 'bao'].forEach(t => { document.getElementById(`ice-${t}-chk`).checked = false; document.getElementById(`ice-${t}-price`).value = ''; document.getElementById(`ice-${t}-price`).disabled = true; });
+        }
+
+        function editCustomer(id) {
+            const c = dbGet('customers').find(c => c.id == id); if(!c) return;
+            document.getElementById('cust-id').value = c.id; document.getElementById('cust-name').value = c.name; document.getElementById('cust-note').value = c.note || '';
+            ['vien', 'bi', 'uop', 'ngo', 'bao'].forEach(t => {
+                const chk = document.getElementById(`ice-${t}-chk`), inp = document.getElementById(`ice-${t}-price`);
+                if(c.prices && c.prices[t]) { chk.checked = true; inp.disabled = false; inp.value = c.prices[t]; } 
+                else { chk.checked = false; inp.disabled = true; inp.value = ''; }
+            });
+        }
+
+        function deleteCustomer(id) {
+            let customers = dbGet('customers'), idx = customers.findIndex(c => c.id == id);
+            if(idx > -1) { customers[idx].isDeleted = true; customers[idx].deleteTime = new Date().toLocaleString('vi-VN'); customers[idx].deletedBy = currentUser.username; dbSet('customers', customers); addLog("Xóa khách hàng", `Xóa KH: ${customers[idx].name}`); showToast('Đã xóa khách hàng'); loadCustomers(); }
+        }
+
+        function loadCustomers() {
+            const customers = dbGet('customers').filter(c => !c.isDeleted), tbody = document.getElementById('body-customers'), select = document.getElementById('rec-customer');
+            tbody.innerHTML = '';
+            customers.forEach(c => {
+                let priceStr = Object.keys(c.prices || {}).map(k => `${ICE_NAMES[k]}: ${formatMoney(c.prices[k])}đ`).join('<br>');
+                tbody.innerHTML += `<tr><td style="font-weight:bold;">${c.name}</td><td style="font-size:12px;">${priceStr}</td><td>${c.note || ''}</td><td><button class="btn btn-outline" style="padding:4px 8px; font-size:11px;" onclick="editCustomer('${c.id}')">Sửa</button> <button class="btn btn-danger" style="padding:4px 8px; font-size:11px;" onclick="deleteCustomer('${c.id}')">Xóa</button></td></tr>`;
+            });
+            let currentSelected = select.value; select.innerHTML = '<option value="">-- Chọn Khách Hàng --</option>';
+            customers.forEach(c => { select.innerHTML += `<option value="${c.id}">${c.name}</option>`; });
+            if(currentSelected && customers.find(c => c.id == currentSelected)) select.value = currentSelected;
+        }
+
+        function updateIceTypeDropdown() {
+            const custId = document.getElementById('rec-customer').value, selIce = document.getElementById('rec-ice-type');
+            selIce.innerHTML = '<option value="">-- Chọn Đá --</option>'; if(!custId) { updatePriceAndTotal(); return; }
+            const cust = dbGet('customers').find(c => c.id == custId);
+            if(cust && cust.prices) Object.keys(cust.prices).forEach(k => { selIce.innerHTML += `<option value="${k}">${ICE_NAMES[k]}</option>`; });
+            updatePriceAndTotal();
+        }
+
+        function updatePriceAndTotal() {
+            const custId = document.getElementById('rec-customer').value, iceType = document.getElementById('rec-ice-type').value, qty = document.getElementById('rec-qty').value, priceInp = document.getElementById('rec-price'), totalInp = document.getElementById('rec-total');
+            if(custId && iceType) {
+                const cust = dbGet('customers').find(c => c.id == custId), price = (cust && cust.prices) ? (cust.prices[iceType] || 0) : 0;
+                priceInp.value = price; totalInp.value = qty ? (price * qty) : 0;
+            } else { priceInp.value = ''; totalInp.value = ''; }
+        }
+
+        function saveRecord() {
+            if (!hasPermission('add_record') && !isEditingRecordId) return showToast('Bạn không có quyền tạo mới giao dịch!', 'error');
+            if (!hasPermission('edit_record') && isEditingRecordId) return showToast('Bạn không có quyền sửa giao dịch!', 'error');
+            const custId = document.getElementById('rec-customer').value, iceType = document.getElementById('rec-ice-type').value, qty = document.getElementById('rec-qty').value, status = document.getElementById('rec-status').value, note = document.getElementById('rec-note').value, date = document.getElementById('filter-date').value;
+            if(!custId || !iceType || !qty || !date) return showToast('Vui lòng điền đủ thông tin!', 'error');
+            const cust = dbGet('customers').find(c => c.id == custId), price = cust.prices[iceType], total = price * qty;
+            let records = dbGet('records');
+            if(isEditingRecordId) {
+                let idx = records.findIndex(r => r.id === isEditingRecordId);
+                if(idx > -1) { addLog("Sửa giao dịch", `Sửa HĐ ${records[idx].id}. SL cũ: ${records[idx].quantity}, Mới: ${qty}`); records[idx] = { ...records[idx], custId, iceType, quantity: parseInt(qty), price, totalMoney: total, status, note }; showToast('Cập nhật thành công!'); }
+            } else {
+                records.push({ id: Date.now().toString(), date, custId, custNameSnapshot: cust.name, iceType, quantity: parseInt(qty), price, totalMoney: total, status, note, createdBy: currentUser.username, isDeleted: false });
+                addLog("Tạo giao dịch", `Thêm GD: ${cust.name}, ${qty} ${ICE_NAMES[iceType]}`); showToast('Lưu giao dịch thành công!');
+            }
+            dbSet('records', records); resetRecordForm(); loadDailyRecords();
+        }
+
+        function resetRecordForm() {
+            isEditingRecordId = null; document.getElementById('form-record-title').innerText = "Tạo Giao Dịch Mới";
+            document.getElementById('rec-id').value = ""; document.getElementById('rec-qty').value = ""; document.getElementById('rec-note').value = ""; document.getElementById('rec-total').value = "";
+            document.getElementById('btn-cancel-edit').style.display = "none";
+        }
+
+        function editRecord(id) {
+            if (!hasPermission('edit_record')) return showToast('Bạn không có quyền sửa!', 'error');
+            const r = dbGet('records').find(r => r.id == id); if(!r) return;
+            isEditingRecordId = r.id; document.getElementById('form-record-title').innerText = "Sửa Giao Dịch " + r.id.substring(r.id.length-4);
+            document.getElementById('rec-customer').value = r.custId; updateIceTypeDropdown();
+            setTimeout(() => { document.getElementById('rec-ice-type').value = r.iceType; document.getElementById('rec-qty').value = r.quantity; document.getElementById('rec-status').value = r.status; document.getElementById('rec-note').value = r.note || ''; updatePriceAndTotal(); document.getElementById('btn-cancel-edit').style.display = "block"; }, 100);
+        }
+
+        function deleteRecord(id) {
+            if (!hasPermission('delete_record')) return showToast('Bạn không có quyền xóa!', 'error');
+            let records = dbGet('records'), idx = records.findIndex(r => r.id == id);
+            if(idx > -1) {
+                if(currentUser.role !== 'admin' && !currentUser.canDeleteAll && records[idx].createdBy !== currentUser.username) return showToast('Không có quyền xóa!', 'error');
+                records[idx].isDeleted = true; records[idx].deleteTime = new Date().toLocaleString('vi-VN'); records[idx].deletedBy = currentUser.username;
+                dbSet('records', records); addLog("Xóa giao dịch", `Xóa HĐ của KH ${records[idx].custNameSnapshot} (${formatMoney(records[idx].totalMoney)}đ)`); showToast('Đã xóa dữ liệu!'); loadDailyRecords();
+            }
+        }
+
+        function loadDailyRecords() {
+            const date = document.getElementById('filter-date').value, records = dbGet('records').filter(r => r.date === date && !r.isDeleted), tbody = document.getElementById('body-daily');
+            let sumTotal = 0, sumPaid = 0, sumUnpaid = 0; tbody.innerHTML = '';
+            records.forEach(r => {
+                sumTotal += r.totalMoney; if(r.status === 'Đã thanh toán') sumPaid += r.totalMoney; else sumUnpaid += r.totalMoney;
+                const badgeClass = r.status === 'Đã thanh toán' ? 'badge badge-paid' : 'badge badge-unpaid';
+                tbody.innerHTML += `<tr><td style="font-weight:600;">${r.custNameSnapshot}</td><td>${ICE_NAMES[r.iceType]}</td><td>${r.quantity}</td><td class="money">${formatMoney(r.totalMoney)} đ</td><td><span class="${badgeClass}">${r.status}</span></td><td>${r.note || ''}</td><td><button class="btn btn-outline" style="padding:4px 8px; font-size:11px;" onclick="editRecord('${r.id}')">Sửa</button> <button class="btn btn-danger" style="padding:4px 8px; font-size:11px;" onclick="deleteRecord('${r.id}')">Xóa</button></td></tr>`;
+            });
+            if(records.length === 0) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--text-muted);">Ngày này chưa có giao dịch nào.</td></tr>`;
+            document.getElementById('day-total').innerText = formatMoney(sumTotal) + ' đ'; document.getElementById('day-paid').innerText = formatMoney(sumPaid) + ' đ'; document.getElementById('day-unpaid').innerText = formatMoney(sumUnpaid) + ' đ';
+        }
+
+        function downloadExcelTemplate() {
+            const ws_data = [["Ngay", "Ten Khach Hang", "Loai Da (vien/bi/uop/ngo/bao)", "So Luong", "Trang Thai (Da thanh toan/Chua thanh toan)", "Ghi Chu"]];
+            const ws = XLSX.utils.aoa_to_sheet(ws_data); applyStylesToWorksheet(ws); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Mau_Nhap_Lieu"); XLSX.writeFile(wb, "Mau_Nhap_So_Ghi_Da_Luong_Ngoc_Minh.xlsx");
+        }
+
+        function exportDailyExcel() {
+            const date = document.getElementById('filter-date').value, records = dbGet('records').filter(r => r.date === date && !r.isDeleted); if(records.length === 0) return showToast('Không có dữ liệu', 'error');
+            const data = records.map(r => ({ "Ngày": r.date, "Khách Hàng": r.custNameSnapshot, "Loại Đá": ICE_NAMES[r.iceType], "Số Lượng": r.quantity, "Đơn Giá": r.price, "Thành Tiền": r.totalMoney, "Trạng Thái": r.status, "Người Nhập": r.createdBy, "Ghi Chú": r.note || '' }));
+            const ws = XLSX.utils.json_to_sheet(data); applyStylesToWorksheet(ws); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, `So_Ngay_${date}`); XLSX.writeFile(wb, `So_Ngay_${date}_Luong_Ngoc_Minh.xlsx`); addLog("Xuất Excel", `Xuất sổ ngày ${date}`);
+        }
+
+        function importExcel(e) {
+            const file = e.target.files[0]; if(!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result), workbook = XLSX.read(data, {type: 'array'}), json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+                let customers = dbGet('customers'), records = dbGet('records'), successCount = 0;
+                json.forEach(row => {
+                    let date = row["Ngay"] || row["Ngày"], cName = row["Ten Khach Hang"] || row["Khách Hàng"], typeRaw = row["Loai Da (vien/bi/uop/ngo/bao)"] || row["Loại Đá"], qty = row["So Luong"] || row["Số Lượng"], status = row["Trang Thai"] || "Chưa thanh toán", note = row["Ghi Chu"] || "";
+                    if(date && cName && typeRaw && qty) {
+                        let c = customers.find(x => x.name.toLowerCase() === String(cName).trim().toLowerCase() && !x.isDeleted);
+                        if(c && c.prices) {
+                            let iceType = 'vien', tLow = String(typeRaw).toLowerCase();
+                            if(tLow.includes('bi')) iceType = 'bi'; else if(tLow.includes('uop') || tLow.includes('ướp')) iceType = 'uop'; else if(tLow.includes('ngo') || tLow.includes('ngô')) iceType = 'ngo'; else if(tLow.includes('bao') || tLow.includes('bào')) iceType = 'bao';
+                            let price = c.prices[iceType];
+                            if(price) { records.push({ id: Date.now().toString() + Math.floor(Math.random()*1000), date: String(date).trim(), custId: c.id, custNameSnapshot: c.name, iceType, quantity: parseInt(qty), price, totalMoney: price * parseInt(qty), status, note, createdBy: currentUser.username, isDeleted: false }); successCount++; }
+                        }
+                    }
+                });
+                dbSet('records', records); addLog("Nhập từ Excel", `Đã nhập thành công ${successCount} dòng`); showToast(`Nhập thành công ${successCount} dòng!`); loadDailyRecords();
+            }; reader.readAsArrayBuffer(file);
+        }
+
+        function generateReport() {
+            const start = document.getElementById('report-start').value, end = document.getElementById('report-end').value;
+            const records = dbGet('records').filter(r => !r.isDeleted && r.date >= start && r.date <= end), reportMap = {};
+            let sumTotal = 0, sumPaid = 0, sumUnpaid = 0;
+            records.forEach(r => {
+                sumTotal += r.totalMoney; if(r.status === 'Đã thanh toán') sumPaid += r.totalMoney; else sumUnpaid += r.totalMoney;
+                if(!reportMap[r.custNameSnapshot]) reportMap[r.custNameSnapshot] = { total: 0, paid: 0, unpaid: 0 };
+                reportMap[r.custNameSnapshot].total += r.totalMoney; if(r.status === 'Đã thanh toán') reportMap[r.custNameSnapshot].paid += r.totalMoney; else reportMap[r.custNameSnapshot].unpaid += r.totalMoney;
+            });
+            document.getElementById('rep-total').innerText = formatMoney(sumTotal) + ' đ'; document.getElementById('rep-paid').innerText = formatMoney(sumPaid) + ' đ'; document.getElementById('rep-unpaid').innerText = formatMoney(sumUnpaid) + ' đ';
+            const tbody = document.getElementById('body-report'); tbody.innerHTML = '';
+            Object.keys(reportMap).forEach(k => {
+                const rep = reportMap[k];
+                tbody.innerHTML += `<tr><td style="font-weight:bold;">${k}</td><td>${formatMoney(rep.total)} đ</td><td style="color:var(--success)">${formatMoney(rep.paid)} đ</td><td style="color:var(--danger); font-weight:bold;">${formatMoney(rep.unpaid)} đ</td></tr>`;
+            });
+        }
+
+        function exportReportExcel() {
+            const start = document.getElementById('report-start').value, end = document.getElementById('report-end').value;
+            const records = dbGet('records').filter(r => !r.isDeleted && r.date >= start && r.date <= end); if(records.length === 0) return showToast('Không có dữ liệu', 'error');
+            const reportMap = {};
+            records.forEach(r => {
+                if(!reportMap[r.custNameSnapshot]) reportMap[r.custNameSnapshot] = { "Khách Hàng": r.custNameSnapshot, "Tổng Mua": 0, "Đã Thanh Toán": 0, "Còn Nợ": 0 };
+                reportMap[r.custNameSnapshot]["Tổng Mua"] += r.totalMoney; if(r.status === 'Đã thanh toán') reportMap[r.custNameSnapshot]["Đã Thanh Toán"] += r.totalMoney; else reportMap[r.custNameSnapshot]["Còn Nợ"] += r.totalMoney;
+            });
+            const ws = XLSX.utils.json_to_sheet(Object.values(reportMap)); applyStylesToWorksheet(ws); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Bao_Cao"); XLSX.writeFile(wb, `Bao_Cao_Doanh_Thu_Tu_${start}_Den_${end}.xlsx`); addLog("Xuất Excel", `Xuất báo cáo tự ${start} đến ${end}`);
+        }
+
+        function createUser() {
+            const u = document.getElementById('user-username').value.trim().toLowerCase(), p = document.getElementById('user-password').value.trim(), f = document.getElementById('new-user-fullname').value.trim();
+            const perms = {}; document.querySelectorAll('.user-perm').forEach(chk => { perms[chk.value] = chk.checked; });
+            const users = window.CLOUD_DATA.users;
+            if(users[u]) return showToast('Tài khoản đã tồn tại', 'error');
+            users[u] = { username: u, password: p, fullname: f, role: 'staff', permissions: perms };
+            dbSet('users', users); addLog("Tạo tài khoản", `Tạo user: ${u}`); showToast('Tạo thành công');
+            document.getElementById('user-username').value = ''; document.getElementById('user-password').value = ''; document.getElementById('new-user-fullname').value = ''; loadUsers();
+        }
+
+        function deleteUser(username) {
+            const users = window.CLOUD_DATA.users;
+            if(users[username]) { delete users[username]; dbSet('users', users); addLog("Xóa tài khoản", `Đã xóa NV: ${username}`); showToast(`Đã xóa ${username}`); loadUsers(); }
+        }
+
+        function loadUsers() {
+            const users = window.CLOUD_DATA.users, tbody = document.getElementById('body-users'); tbody.innerHTML = '';
+            for (let k in users) {
+                if (users[k].role === 'admin') continue;
+                let permStr = Object.keys(users[k].permissions || {}).filter(p => users[k].permissions[p]).join(', ');
+                tbody.innerHTML += `<tr><td><b>${users[k].username}</b></td><td>${users[k].fullname}</td><td>${users[k].password}</td><td style="font-size:11px;">${permStr}</td><td><button class="btn btn-danger" onclick="deleteUser('${k}')">Xóa bỏ</button></td></tr>`;
+            }
+        }
+
+        function updateProfile() {
+            const f = document.getElementById('profile-fullname').value.trim(), p = document.getElementById('profile-password').value, users = window.CLOUD_DATA.users;
+            users[currentUser.username].fullname = f; if(p) users[currentUser.username].password = p;
+            dbSet('users', users); currentUser = users[currentUser.username]; window.currentUser = currentUser;
+            document.getElementById('user-fullname').innerText = currentUser.fullname; addLog("Đổi thông tin cá nhân"); showToast('Đã lưu thông tin cá nhân');
+        }
+
+        function loadLogs() {
+            const logs = dbGet('logs'), tbody = document.getElementById('body-logs'); tbody.innerHTML = '';
+            logs.forEach(l => { tbody.innerHTML += `<tr><td style="font-size:12px; color:gray;">${l.time}</td><td><b>${l.user}</b></td><td><b style="color:var(--primary)">${l.action}</b><br><span style="font-size:12px;color:gray;">${l.details}</span></td></tr>`; });
+        }
+
+        function loadTrash() {
+            const tbody = document.getElementById('body-trash'); tbody.innerHTML = '';
+            const recs = dbGet('records').filter(r => r.isDeleted), custs = dbGet('customers').filter(c => c.isDeleted);
+            recs.forEach(r => { tbody.innerHTML += `<tr><td>[Giao Dịch] Ngày ${r.date} - Khách: ${r.custNameSnapshot} - ${formatMoney(r.totalMoney)}đ</td><td style="font-size:12px;">Xóa bởi: <b>${r.deletedBy}</b><br>Lúc: ${r.deleteTime}</td><td><button class="btn btn-success" style="font-size:11px;" onclick="restoreItem('records', '${r.id}')">Khôi phục</button></td></tr>`; });
+            custs.forEach(c => { tbody.innerHTML += `<tr><td>[Khách Hàng] Tên: ${c.name}</td><td style="font-size:12px;">Xóa bởi: <b>${c.deletedBy}</b><br>Lúc: ${c.deleteTime}</td><td><button class="btn btn-success" style="font-size:11px;" onclick="restoreItem('customers', '${c.id}')">Khôi phục</button></td></tr>`; });
+        }
+
+        function restoreItem(type, id) {
+            let items = dbGet(type), idx = items.findIndex(i => i.id == id);
+            if(idx > -1) { items[idx].isDeleted = false; dbSet(type, items); addLog("Khôi phục dữ liệu", `Đã khôi phục ${type === 'records' ? 'giao dịch' : 'khách hàng'} ID: ${id}`); showToast('Đã khôi phục thành công!'); loadTrash(); if(type === 'records') loadDailyRecords(); if(type === 'customers') loadCustomers(); }
+        }
+    </script>
+</body>
+</html>
