@@ -244,12 +244,13 @@
             </div>
 
             <div class="card" style="padding: 0;">
-                <div class="card-header" style="margin: 20px 20px 0 20px;">Công Nợ Chi Tiết Từng Khách Hàng</div>
+                <div class="card-header" style="margin: 20px 20px 0 20px;">Công Nợ & Thống Kê Chi Tiết Từng Khách Hàng</div>
                 <div class="table-responsive" style="padding: 0 20px 20px 20px;">
                     <table id="table-report">
                         <thead>
                             <tr>
                                 <th>Tên Khách Hàng</th>
+                                <th>Chi Tiết Số Lượng Đá Lấy (Túi)</th>
                                 <th>Tổng Mua (đ)</th>
                                 <th>Đã Thanh Toán (đ)</th>
                                 <th>Còn Nợ (đ)</th>
@@ -652,6 +653,10 @@
         
         let currentUser = null;
         let isEditingRecordId = null;
+        
+        // Thêm biến để chống spam nhật ký khi hệ thống tự tải lại dữ liệu
+        let lastViewedDate = null;
+        let lastViewedRecon = null;
 
         function showToast(msg, type = 'success') {
             const container = document.getElementById('toast-container');
@@ -694,7 +699,7 @@
             if (users[u] && users[u].password === p) {
                 currentUser = users[u];
                 window.currentUser = currentUser; // Đẩy biến currentUser ra global cho Firebase sử dụng
-                addLog("Đăng nhập");
+                addLog("Đăng nhập", "Đăng nhập vào hệ thống");
                 
                 document.getElementById('login-screen').classList.add('hidden');
                 document.getElementById('main-dashboard').classList.remove('hidden');
@@ -716,7 +721,7 @@
         }
 
         function logout() {
-            if(currentUser) addLog("Đăng xuất");
+            if(currentUser) addLog("Đăng xuất", "Đăng xuất khỏi hệ thống");
             currentUser = null;
             window.currentUser = null; // Xóa trạng thái đăng nhập global
             document.getElementById('login-username').value = '';
@@ -897,6 +902,13 @@
 
         function loadDailyRecords() {
             const date = document.getElementById('filter-date').value, records = dbGet('records').filter(r => r.date === date && !r.isDeleted), tbody = document.getElementById('body-daily');
+            
+            // Ghi nhật ký khi người dùng đổi ngày xem sổ
+            if (currentUser && lastViewedDate !== date) {
+                addLog("Xem sổ ghi đá", `Xem dữ liệu ngày ${date}`);
+                lastViewedDate = date;
+            }
+
             let sumTotal = 0, sumPaid = 0, sumUnpaid = 0; tbody.innerHTML = '';
             records.forEach(r => {
                 sumTotal += r.totalMoney; if(r.status === 'Đã thanh toán') sumPaid += r.totalMoney; else sumUnpaid += r.totalMoney;
@@ -932,6 +944,15 @@
             calculateComparison();
 
             if (!month || !custId) return;
+
+            // Ghi nhật ký xem đối soát
+            const reconKey = `${custId}_${month}`;
+            if (currentUser && lastViewedRecon !== reconKey) {
+                const sel = document.getElementById('recon-customer');
+                const custName = sel.options[sel.selectedIndex].text;
+                addLog("Xem đối soát", `Đối soát tháng ${month} của khách: ${custName}`);
+                lastViewedRecon = reconKey;
+            }
 
             // 1. Lấy dữ liệu hệ thống (Chỉ tính giao dịch "Chưa thanh toán" trong tháng)
             const records = dbGet('records').filter(r => !r.isDeleted && r.custId === custId && r.date.startsWith(month) && r.status === "Chưa thanh toán");
@@ -1101,6 +1122,7 @@
             applyStylesToWorksheet(ws); 
             const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Mau_Doi_Soat");
             XLSX.writeFile(wb, "Mau_Nhap_Doi_Soat_Khach_Hang.xlsx");
+            addLog("Tải biểu mẫu", "Mẫu nhập liệu đối soát Excel");
         }
 
         function importReconExcel(e) {
@@ -1172,6 +1194,7 @@
             applyStylesToWorksheet(ws);
             const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Doi_Soat");
             XLSX.writeFile(wb, `Doi_Soat_${custName}_Thang_${month}.xlsx`);
+            addLog("Xuất Excel Đối Soát", `Khách hàng: ${custName} - Tháng: ${month}`);
         }
 
         // --- EXPORT CÁC MỤC CŨ ---
@@ -1183,6 +1206,7 @@
             if(!data.length) return showToast('Không có dữ liệu KH', 'error');
             const ws = XLSX.utils.json_to_sheet(data); applyStylesToWorksheet(ws);
             const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Khach_Hang"); XLSX.writeFile(wb, "Danh_Sach_Khach_Hang.xlsx");
+            addLog("Xuất file Excel", "Danh sách khách hàng và Bảng giá");
         }
 
         function exportUsersExcel() {
@@ -1195,12 +1219,15 @@
             if(!data.length) return showToast('Không có nhân sự', 'error');
             const ws = XLSX.utils.json_to_sheet(data); applyStylesToWorksheet(ws);
             const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Nhan_Su"); XLSX.writeFile(wb, "Danh_Sach_Nhan_Vien.xlsx");
+            addLog("Xuất file Excel", "Danh sách tài khoản nhân viên");
         }
 
+        // Fix lỗi nạp dữ liệu logs bị thiếu ID hoặc xuất file bị rỗng
         function exportLogsExcel() {
             const logs = dbGet('logs'); if(!logs.length) return showToast('Không có nhật ký', 'error');
             const ws = XLSX.utils.json_to_sheet(logs.map(l => ({"Thời Gian": l.time, "Người Dùng": l.user, "Hành Động": l.action, "Chi Tiết": l.details})));
             applyStylesToWorksheet(ws); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Nhat_Ky"); XLSX.writeFile(wb, "Nhat_Ky_He_Thong.xlsx");
+            addLog("Xuất file Excel", "Nhật ký hệ thống");
         }
 
         function exportTrashExcel() {
@@ -1210,50 +1237,187 @@
             if(!data.length) return showToast('Thùng rác trống', 'error');
             const ws = XLSX.utils.json_to_sheet(data); applyStylesToWorksheet(ws);
             const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Thung_Rac"); XLSX.writeFile(wb, "Lich_Su_Xoa.xlsx");
+            addLog("Xuất file Excel", "Dữ liệu thùng rác (Khôi phục)");
         }
 
         // --- QUẢN LÝ TÀI KHOẢN (ADMIN) & REPORTS CŨ ---
         function generateReport() {
             const start = document.getElementById('report-start').value, end = document.getElementById('report-end').value;
             const records = dbGet('records').filter(r => !r.isDeleted && r.date >= start && r.date <= end);
-            const reportMap = {}; let sumTotal = 0, sumPaid = 0, sumUnpaid = 0;
+            const reportMap = {}; 
+            let sumTotal = 0, sumPaid = 0, sumUnpaid = 0;
+            let globalIceQtyMap = { vien: 0, bi: 0, uop: 0, ngo: 0, bao: 0 }; // Tổng tất cả túi đá xuất ra toàn hệ thống
+
             records.forEach(r => {
-                sumTotal += r.totalMoney; if(r.status === 'Đã thanh toán') sumPaid += r.totalMoney; else sumUnpaid += r.totalMoney;
-                if(!reportMap[r.custNameSnapshot]) reportMap[r.custNameSnapshot] = { total: 0, paid: 0, unpaid: 0 };
+                sumTotal += r.totalMoney; 
+                if(r.status === 'Đã thanh toán') sumPaid += r.totalMoney; else sumUnpaid += r.totalMoney;
+
+                if(!reportMap[r.custNameSnapshot]) {
+                    reportMap[r.custNameSnapshot] = { 
+                        total: 0, 
+                        paid: 0, 
+                        unpaid: 0,
+                        iceQty: { vien: 0, bi: 0, uop: 0, ngo: 0, bao: 0 } 
+                    };
+                }
+                
                 reportMap[r.custNameSnapshot].total += r.totalMoney;
-                if(r.status === 'Đã thanh toán') reportMap[r.custNameSnapshot].paid += r.totalMoney; else reportMap[r.custNameSnapshot].unpaid += r.totalMoney;
+                if(r.status === 'Đã thanh toán') {
+                    reportMap[r.custNameSnapshot].paid += r.totalMoney; 
+                } else {
+                    reportMap[r.custNameSnapshot].unpaid += r.totalMoney;
+                }
+
+                // Cộng dồn số lượng túi đá theo từng loại của khách hàng
+                if(r.iceType && reportMap[r.custNameSnapshot].iceQty[r.iceType] !== undefined) {
+                    reportMap[r.custNameSnapshot].iceQty[r.iceType] += r.quantity;
+                    globalIceQtyMap[r.iceType] += r.quantity; // Thống kê tổng số lượng toàn kỳ
+                }
             });
-            document.getElementById('rep-total').innerText = formatMoney(sumTotal) + ' đ'; document.getElementById('rep-paid').innerText = formatMoney(sumPaid) + ' đ'; document.getElementById('rep-unpaid').innerText = formatMoney(sumUnpaid) + ' đ';
-            const tbody = document.getElementById('body-report'); tbody.innerHTML = '';
+
+            document.getElementById('rep-total').innerText = formatMoney(sumTotal) + ' đ'; 
+            document.getElementById('rep-paid').innerText = formatMoney(sumPaid) + ' đ'; 
+            document.getElementById('rep-unpaid').innerText = formatMoney(sumUnpaid) + ' đ';
+            
+            const tbody = document.getElementById('body-report'); 
+            tbody.innerHTML = '';
+            
             Object.keys(reportMap).forEach(k => {
                 const rep = reportMap[k];
-                tbody.innerHTML += `<tr><td style="font-weight:bold;">${k}</td><td>${formatMoney(rep.total)} đ</td><td style="color:var(--success)">${formatMoney(rep.paid)} đ</td><td style="color:var(--danger); font-weight:bold;">${formatMoney(rep.unpaid)} đ</td></tr>`;
+                // Tạo chuỗi hiển thị chi tiết số lượng túi đá lấy của khách
+                let iceDetailStr = Object.keys(rep.iceQty)
+                    .filter(type => rep.iceQty[type] > 0)
+                    .map(type => `<span style="white-space:nowrap;"><b>${ICE_NAMES[type]}:</b> ${rep.iceQty[type]} túi</span>`)
+                    .join(', ');
+                if(!iceDetailStr) iceDetailStr = `<span style="color:var(--text-muted);">Không có giao dịch</span>`;
+
+                tbody.innerHTML += `<tr>
+                    <td style="font-weight:bold;">${k}</td>
+                    <td style="font-size:12px;">${iceDetailStr}</td>
+                    <td>${formatMoney(rep.total)} đ</td>
+                    <td style="color:var(--success)">${formatMoney(rep.paid)} đ</td>
+                    <td style="color:var(--danger); font-weight:bold;">${formatMoney(rep.unpaid)} đ</td>
+                </tr>`;
             });
+
+            if(Object.keys(reportMap).length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:gray;padding: 20px;">Không có dữ liệu trong kỳ báo cáo này</td></tr>`;
+            } else {
+                // Thêm dòng TỔNG CỘNG ở cuối bảng báo cáo trên giao diện
+                let totalIceStr = Object.keys(globalIceQtyMap)
+                    .filter(type => globalIceQtyMap[type] > 0)
+                    .map(type => `<b>${ICE_NAMES[type]}:</b> ${globalIceQtyMap[type]} túi`)
+                    .join(' | ');
+                const grandTotalQty = Object.values(globalIceQtyMap).reduce((acc, curr) => acc + curr, 0);
+
+                tbody.innerHTML += `<tr style="background-color: #f1f5f9; font-weight: bold; border-top: 2px solid var(--primary);">
+                    <td style="color: var(--primary);">TỔNG CỘNG CẢ KỲ</td>
+                    <td style="font-size: 12px; color: #1e3a8a;">
+                        <div>${totalIceStr}</div>
+                        <div style="margin-top: 4px; font-weight: 800; text-transform: uppercase;">🔥 TỔNG SỐ LƯỢNG TẤT CẢ: <span style="font-size: 13px; color: var(--secondary);">${grandTotalQty} túi</span></div>
+                    </td>
+                    <td style="color: var(--text-main); font-size: 15px;">${formatMoney(sumTotal)} đ</td>
+                    <td style="color: var(--success); font-size: 15px;">${formatMoney(sumPaid)} đ</td>
+                    <td style="color: var(--danger); font-size: 15px;">${formatMoney(sumUnpaid)} đ</td>
+                </tr>`;
+            }
+
+            // Ghi nhật ký xem báo cáo
+            if (currentUser) {
+                addLog("Xem báo cáo KQKD", `Từ ngày ${start} đến ngày ${end}`);
+            }
         }
-        function exportReportExcel() { /* Giữ nguyên hàm cũ */ 
-            const start = document.getElementById('report-start').value; const end = document.getElementById('report-end').value;
+
+        function exportReportExcel() { 
+            const start = document.getElementById('report-start').value; 
+            const end = document.getElementById('report-end').value;
             const records = dbGet('records').filter(r => !r.isDeleted && r.date >= start && r.date <= end);
             if(records.length === 0) return showToast('Không có dữ liệu', 'error');
+
             const reportMap = {};
+            let globalIceQtyMap = { vien: 0, bi: 0, uop: 0, ngo: 0, bao: 0 };
+            let totalBuy = 0, totalPaid = 0, totalUnpaid = 0;
+
             records.forEach(r => {
-                if(!reportMap[r.custNameSnapshot]) reportMap[r.custNameSnapshot] = { "Khách Hàng": r.custNameSnapshot, "Tổng Mua": 0, "Đã Thanh Toán": 0, "Còn Nợ": 0 };
-                reportMap[r.custNameSnapshot]["Tổng Mua"] += r.totalMoney;
-                if(r.status === 'Đã thanh toán') reportMap[r.custNameSnapshot]["Đã Thanh Toán"] += r.totalMoney; else reportMap[r.custNameSnapshot]["Còn Nợ"] += r.totalMoney;
+                totalBuy += r.totalMoney;
+                if(r.status === 'Đã thanh toán') totalPaid += r.totalMoney; else totalUnpaid += r.totalMoney;
+
+                if(!reportMap[r.custNameSnapshot]) {
+                    reportMap[r.custNameSnapshot] = { 
+                        "Khách Hàng": r.custNameSnapshot, 
+                        "Đá Viên (túi)": 0,
+                        "Đá Bi (túi)": 0,
+                        "Đá Ướp (túi)": 0,
+                        "Đá Ngô (túi)": 0,
+                        "Đá Bào (túi)": 0,
+                        "Tổng Mua (VNĐ)": 0, 
+                        "Đã Thanh Toán (VNĐ)": 0, 
+                        "Còn Nợ (VNĐ)": 0 
+                    };
+                }
+                
+                reportMap[r.custNameSnapshot]["Tổng Mua (VNĐ)"] += r.totalMoney;
+                if(r.status === 'Đã thanh toán') {
+                    reportMap[r.custNameSnapshot]["Đã Thanh Toán (VNĐ)"] += r.totalMoney;
+                } else {
+                    reportMap[r.custNameSnapshot]["Còn Nợ (VNĐ)"] += r.totalMoney;
+                }
+
+                if(r.iceType) {
+                    if (r.iceType === 'vien') { reportMap[r.custNameSnapshot]["Đá Viên (túi)"] += r.quantity; globalIceQtyMap.vien += r.quantity; }
+                    else if (r.iceType === 'bi') { reportMap[r.custNameSnapshot]["Đá Bi (túi)"] += r.quantity; globalIceQtyMap.bi += r.quantity; }
+                    else if (r.iceType === 'uop') { reportMap[r.custNameSnapshot]["Đá Ướp (túi)"] += r.quantity; globalIceQtyMap.uop += r.quantity; }
+                    else if (r.iceType === 'ngo') { reportMap[r.custNameSnapshot]["Đá Ngô (túi)"] += r.quantity; globalIceQtyMap.ngo += r.quantity; }
+                    else if (r.iceType === 'bao') { reportMap[r.custNameSnapshot]["Đá Bào (túi)"] += r.quantity; globalIceQtyMap.bao += r.quantity; }
+                }
             });
-            const ws = XLSX.utils.json_to_sheet(Object.values(reportMap)); applyStylesToWorksheet(ws);
-            const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Bao_Cao"); XLSX.writeFile(wb, `Bao_Cao_Doanh_Thu_Tu_${start}_Den_${end}.xlsx`);
+
+            // Chuyển map dữ liệu thành mảng để chuẩn bị xuất Excel
+            const dataList = Object.values(reportMap);
+
+            // Thêm dòng tổng cộng ở cuối dữ liệu Excel
+            const grandTotalQtyAll = Object.values(globalIceQtyMap).reduce((acc, curr) => acc + curr, 0);
+            dataList.push({
+                "Khách Hàng": "TỔNG CỘNG CẢ KỲ",
+                "Đá Viên (túi)": globalIceQtyMap.vien,
+                "Đá Bi (túi)": globalIceQtyMap.bi,
+                "Đá Ướp (túi)": globalIceQtyMap.uop,
+                "Đá Ngô (túi)": globalIceQtyMap.ngo,
+                "Đá Bào (túi)": globalIceQtyMap.bao,
+                "Tổng Mua (VNĐ)": totalBuy,
+                "Đã Thanh Toán (VNĐ)": totalPaid,
+                "Còn Nợ (VNĐ)": totalUnpaid
+            });
+
+            // Ghi chú dòng Tổng cộng chung tất cả túi đá
+            dataList.push({
+                "Khách Hàng": "TỔNG SỐ LƯỢNG TẤT CẢ CÁC LOẠI ĐÁ ĐÃ XUẤT",
+                "Đá Viên (túi)": `${grandTotalQtyAll} túi`,
+                "Đá Bi (túi)": "", "Đá Ướp (túi)": "", "Đá Ngô (túi)": "", "Đá Bào (túi)": "",
+                "Tổng Mua (VNĐ)": "", "Đã Thanh Toán (VNĐ)": "", "Còn Nợ (VNĐ)": ""
+            });
+
+            const ws = XLSX.utils.json_to_sheet(dataList); 
+            applyStylesToWorksheet(ws);
+            const wb = XLSX.utils.book_new(); 
+            XLSX.utils.book_append_sheet(wb, ws, "Bao_Cao_KQKD"); 
+            XLSX.writeFile(wb, `Bao_Cao_Doanh_Thu_Tu_${start}_Den_${end}.xlsx`);
+            addLog("Xuất Excel Báo Cáo", `Từ ngày ${start} đến ngày ${end}`);
         }
-        function exportDailyExcel() { /* Giữ nguyên hàm cũ */ 
+
+        function exportDailyExcel() { 
             const date = document.getElementById('filter-date').value; const records = dbGet('records').filter(r => r.date === date && !r.isDeleted);
             if(records.length === 0) return showToast('Không có dữ liệu!', 'error');
             const ws = XLSX.utils.json_to_sheet(records.map(r => ({"Ngày": r.date, "Khách Hàng": r.custNameSnapshot, "Loại Đá": ICE_NAMES[r.iceType], "Số Lượng": r.quantity, "Đơn Giá": r.price, "Thành Tiền": r.totalMoney, "Trạng Thái": r.status, "Ghi Chú": r.note || ''})));
             applyStylesToWorksheet(ws); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, `So_Ngay_${date}`); XLSX.writeFile(wb, `So_Ngay_${date}_LNM.xlsx`);
+            addLog("Xuất Excel Sổ Ngày", `Dữ liệu ngày ${date}`);
         }
-        function downloadExcelTemplate() { /* Giữ nguyên */ 
+        function downloadExcelTemplate() { 
             const ws = XLSX.utils.aoa_to_sheet([["Ngay", "Ten Khach Hang", "Loai Da (vien/bi/uop/ngo/bao)", "So Luong", "Trang Thai (Da thanh toan/Chua thanh toan)", "Ghi Chu"]]);
             applyStylesToWorksheet(ws); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Mau_Nhap"); XLSX.writeFile(wb, "Mau_Nhap_So_Ghi_Da.xlsx");
+            addLog("Tải biểu mẫu", "Mẫu nhập liệu sổ giao dịch Excel");
         }
-        function importExcel(e) { /* Giữ nguyên */ 
+        function importExcel(e) { 
             const file = e.target.files[0]; if(!file) return;
             const reader = new FileReader();
             reader.onload = function(ev) {
