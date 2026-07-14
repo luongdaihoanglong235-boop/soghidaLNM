@@ -131,6 +131,7 @@
             <button class="tab-btn" onclick="switchTab('tab-ca-nhan')">👤 Cá Nhân</button>
         </div>
 
+        <!-- TAB 1: SỔ GIAO DỊCH NGÀY -->
         <div id="tab-so-sach" class="tab-content active">
             <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 15px; margin-bottom: 15px;">
                 <div class="card" style="margin-bottom: 0; padding: 10px 20px; display: flex; align-items: center; gap: 10px;">
@@ -221,6 +222,7 @@
             </div>
         </div>
 
+        <!-- TAB 2: BÁO CÁO -->
         <div id="tab-bao-cao" class="tab-content">
             <div class="card">
                 <div class="card-header">Tùy Chọn Báo Cáo</div>
@@ -239,6 +241,7 @@
             </div>
 
             <div class="summary-box">
+                <!-- Thêm thẻ tổng số lượng túi -->
                 <div class="sum-card purple"><span class="label">Tổng Số Lượng (Túi)</span><span class="value" style="color:var(--purple)" id="rep-total-qty">0</span></div>
                 <div class="sum-card"><span class="label">Tổng Giao Dịch (Kỳ)</span><span class="value" id="rep-total">0 đ</span></div>
                 <div class="sum-card success"><span class="label">Tổng Đã Thu</span><span class="value" style="color:var(--success)" id="rep-paid">0 đ</span></div>
@@ -264,6 +267,7 @@
             </div>
         </div>
 
+        <!-- TAB 3: TỔNG KẾT ĐỐI SOÁT -->
         <div id="tab-tong-ket" class="tab-content">
             <div class="card" style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
                 <div class="form-group" style="margin: 0; min-width: 200px;">
@@ -279,6 +283,7 @@
             </div>
 
             <div class="grid-2">
+                <!-- Cột trái: Hệ thống + Ảnh -->
                 <div>
                     <div class="card" style="background-color: #f8fafc; border-left: 4px solid var(--primary);">
                         <div class="card-header" style="color:var(--primary); font-size: 15px;">Phần 1: Số Liệu Hệ Thống Ghi Nhận</div>
@@ -304,10 +309,12 @@
                             <input type="file" id="recon-image-upload" accept="image/*" class="hidden" multiple onchange="handleReconImages(event)">
                         </label>
                         <div id="recon-image-preview" class="img-preview-container">
-                            </div>
+                            <!-- Ảnh preview sẽ hiển thị ở đây -->
+                        </div>
                     </div>
                 </div>
 
+                <!-- Cột phải: Nhập tay từ KH + So Sánh -->
                 <div>
                     <div class="card" style="border-left: 4px solid var(--warning);">
                         <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
@@ -332,7 +339,8 @@
                                     </tr>
                                 </thead>
                                 <tbody id="recon-cust-body">
-                                    </tbody>
+                                    <!-- Dữ liệu nhập tay -->
+                                </tbody>
                             </table>
                         </div>
                         <button class="btn btn-outline" style="width: 100%; font-size: 12px; border-style: dashed;" onclick="addReconRow()">+ Thêm Dòng Thủ Công</button>
@@ -358,6 +366,7 @@
             </div>
         </div>
 
+        <!-- TAB 4: KHÁCH HÀNG & BẢNG GIÁ -->
         <div id="tab-khach-hang" class="tab-content">
             <div class="grid-2">
                 <div class="card">
@@ -424,6 +433,7 @@
             </div>
         </div>
 
+        <!-- TAB 5: QUẢN LÝ NHÂN SỰ -->
         <div id="tab-nhan-vien" class="tab-content">
             <div class="grid-2">
                 <div class="card">
@@ -478,6 +488,7 @@
             </div>
         </div>
 
+        <!-- TAB 6: HỆ THỐNG (LỊCH SỬ) -->
         <div id="tab-he-thong" class="tab-content">
             <div class="card">
                 <div class="card-header">Công Cụ Quản Trị</div>
@@ -524,6 +535,7 @@
             </div>
         </div>
 
+        <!-- TAB 7: CÁ NHÂN -->
         <div id="tab-ca-nhan" class="tab-content">
             <div class="card" style="max-width: 500px; margin: 0 auto;">
                 <div class="card-header">Đổi Thông Tin Cá Nhân</div>
@@ -1036,16 +1048,34 @@
             tr.innerHTML = `
                 <td><input type="date" class="form-control" style="padding:4px; font-size:12px;" value="${date}"></td>
                 <td>
-                    <select class="form-control rec-c-type" style="padding:4px; font-size:12px;" onchange="calculateComparison()">
+                    <select class="form-control rec-c-type" style="padding:4px; font-size:12px;" onchange="updateReconRowTotal(this)">
                         ${typeOptions}
                     </select>
                 </td>
-                <td><input type="number" class="form-control rec-c-qty" style="padding:4px; font-size:12px;" value="${qty}" oninput="calculateComparison()"></td>
+                <td><input type="number" class="form-control rec-c-qty" style="padding:4px; font-size:12px;" value="${qty}" oninput="updateReconRowTotal(this)"></td>
                 <td><input type="number" class="form-control rec-c-money" style="padding:4px; font-size:12px;" value="${total}" oninput="calculateComparison()"></td>
                 <td><button class="btn btn-danger" style="padding:2px 6px; font-size:10px;" onclick="this.closest('tr').remove(); calculateComparison();">Xóa</button></td>
             `;
             tbody.appendChild(tr);
         }
+
+        window.updateReconRowTotal = function(element) {
+            const tr = element.closest('tr');
+            const custId = document.getElementById('recon-customer').value;
+            const typeVal = tr.querySelector('.rec-c-type').value;
+            const qtyVal = parseInt(tr.querySelector('.rec-c-qty').value || 0);
+            const moneyInp = tr.querySelector('.rec-c-money');
+            
+            if (custId && typeVal) {
+                const customers = dbGet('customers');
+                const cust = customers.find(c => c.id == custId);
+                if (cust && cust.prices && cust.prices[typeVal] !== undefined) {
+                    const price = parseFloat(cust.prices[typeVal]);
+                    moneyInp.value = qtyVal * price;
+                }
+            }
+            calculateComparison();
+        };
 
         function processImage(file) {
             return new Promise((resolve) => {
@@ -1216,6 +1246,16 @@
 
         function importReconExcel(e) {
             const file = e.target.files[0]; if(!file) return;
+
+            // Cần chọn Khách Hàng trước để hệ thống biết đơn giá từng loại đá của khách này
+            const custId = document.getElementById('recon-customer').value;
+            if (!custId) {
+                showToast('Vui lòng chọn Khách Hàng trước khi nhập Excel để hệ thống tự tính Thành Tiền!', 'error');
+                e.target.value = '';
+                return;
+            }
+            const cust = dbGet('customers').find(c => c.id == custId);
+
             const reader = new FileReader();
             reader.onload = function(e) {
                 const data = new Uint8Array(e.target.result);
@@ -1225,11 +1265,12 @@
                 const tbody = document.getElementById('recon-cust-body');
                 tbody.innerHTML = ''; 
                 
+                let missingPriceCount = 0;
+
                 json.forEach(row => {
                     let date = row["Ngay (YYYY-MM-DD)"] || row["Ngày"] || "";
                     let typeRaw = row["Loai Da"] || row["Loại Đá"] || "";
-                    let qty = row["So Luong Tui"] || row["Số Lượng"] || 0;
-                    let total = row["Thanh Tien No (VND)"] || row["Thành Tiền"] || 0;
+                    let qty = parseFloat(row["So Luong Tui"] || row["Số Lượng"] || 0) || 0;
                     
                     let typeKey = '';
                     let tLow = String(typeRaw).toLowerCase();
@@ -1239,11 +1280,24 @@
                     else if(tLow.includes('bao')) typeKey = 'bao';
                     else if(tLow.includes('vien') || tLow.includes('viên')) typeKey = 'vien';
 
+                    // Tự động tính Thành Tiền = Số Lượng x Đơn Giá (lấy theo đơn giá của khách hàng đã cấu hình sẵn trên hệ thống)
+                    let total = 0;
+                    if (typeKey && cust && cust.prices && cust.prices[typeKey] !== undefined) {
+                        const price = parseFloat(cust.prices[typeKey]);
+                        total = qty * price;
+                    } else {
+                        // Không xác định được đơn giá hệ thống cho loại đá này -> tạm dùng số liệu có sẵn trong file (nếu có) làm dự phòng
+                        total = parseFloat(row["Thanh Tien No (VND)"] || row["Thành Tiền"] || 0) || 0;
+                        missingPriceCount++;
+                    }
+
                     addReconRow(date, typeKey, qty, total);
                 });
                 
                 calculateComparison();
-                showToast(`Đã nhập ${json.length} dòng từ Excel!`);
+                let msg = `Đã nhập ${json.length} dòng từ Excel và tự động tính Thành Tiền theo đơn giá hệ thống!`;
+                if (missingPriceCount > 0) msg += ` (${missingPriceCount} dòng không xác định được loại đá/đơn giá, tạm lấy số liệu trong file)`;
+                showToast(msg);
                 document.getElementById('recon-excel-upload').value = ''; 
             };
             reader.readAsArrayBuffer(file);
@@ -1507,7 +1561,7 @@
         }
         function loadTrash() {
             const tbody = document.getElementById('body-trash'); tbody.innerHTML = '';
-            const recs = dbGet('records').filter(r => r.isDeleted), custs = dbGet('customers').filter(c => c.isDeleted);
+            const recs = dbGet('records').filter(r => r.isDeleted), custs = dbGet('customers').filter(c => r => r.isDeleted);
             recs.forEach(r => { tbody.innerHTML += `<tr><td>[Giao Dịch] Ngày ${r.date} - Khách: ${r.custNameSnapshot} - ${formatMoney(r.totalMoney)}đ</td><td style="font-size:12px;">Xóa bởi: <b>${r.deletedBy}</b><br>Lúc: ${r.deleteTime}</td><td><button class="btn btn-success" style="font-size:11px;" onclick="restoreItem('records', '${r.id}')">Khôi phục</button></td></tr>`; });
             custs.forEach(c => { tbody.innerHTML += `<tr><td>[Khách Hàng] Tên: ${c.name}</td><td style="font-size:12px;">Xóa bởi: <b>${c.deletedBy}</b><br>Lúc: ${c.deleteTime}</td><td><button class="btn btn-success" style="font-size:11px;" onclick="restoreItem('customers', '${c.id}')">Khôi phục</button></td></tr>`; });
         }
