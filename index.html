@@ -9,6 +9,7 @@
         :root {
             --primary: #0f172a; --secondary: #2563eb; --danger: #ef4444; --success: #10b981; --warning: #f59e0b;
             --background: #f1f5f9; --surface: #ffffff; --text-main: #1e293b; --text-muted: #64748b; --border: #e2e8f0;
+            --purple: #8b5cf6;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -25,6 +26,7 @@
         .btn-success { background-color: var(--success); color: white; }
         .btn-warning { background-color: var(--warning); color: white; }
         .btn-info { background-color: #0ea5e9; color: white; }
+        .btn-purple { background-color: var(--purple); color: white; }
         .btn-outline { background-color: transparent; border: 1px solid var(--border); color: var(--text-main); }
         
         .container { max-width: 1400px; margin: 0 auto; padding: 20px; width: 100%; flex: 1; }
@@ -64,15 +66,15 @@
         .badge-unpaid { background: #fee2e2; color: #b91c1c; }
         
         .summary-box { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; }
-        .sum-card { flex: 1; min-width: 200px; padding: 20px; background: white; border-radius: 12px; border-left: 4px solid var(--secondary); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .sum-card { flex: 1; min-width: 180px; padding: 20px; background: white; border-radius: 12px; border-left: 4px solid var(--secondary); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .sum-card.danger { border-left-color: var(--danger); }
         .sum-card.success { border-left-color: var(--success); }
+        .sum-card.purple { border-left-color: var(--purple); }
         .sum-card .label { color: var(--text-muted); font-weight: 600; font-size: 13px; margin-bottom: 5px; display: block; }
         .sum-card .value { font-size: 24px; font-weight: bold; color: var(--text-main); }
 
         .ice-pricing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; background: var(--background); padding: 10px; border-radius: 8px; align-items: center;}
         
-        /* Chỉnh CSS cho Image Upload */
         .img-preview-container { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
         .img-preview { position: relative; width: 100px; height: 100px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
         .img-preview img { width: 100%; height: 100%; object-fit: cover; }
@@ -82,6 +84,7 @@
         .toast { min-width: 250px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-left: 5px solid var(--secondary); display: flex; align-items: center; justify-content: space-between; animation: slideIn 0.3s forwards; }
         .toast.error { border-left-color: var(--danger); }
         .toast.success { border-left-color: var(--success); }
+        .toast.info { border-left-color: var(--warning); }
         @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
     </style>
 </head>
@@ -238,6 +241,8 @@
             </div>
 
             <div class="summary-box">
+                <!-- Thêm thẻ tổng số lượng túi -->
+                <div class="sum-card purple"><span class="label">Tổng Số Lượng (Túi)</span><span class="value" style="color:var(--purple)" id="rep-total-qty">0</span></div>
                 <div class="sum-card"><span class="label">Tổng Giao Dịch (Kỳ)</span><span class="value" id="rep-total">0 đ</span></div>
                 <div class="sum-card success"><span class="label">Tổng Đã Thu</span><span class="value" style="color:var(--success)" id="rep-paid">0 đ</span></div>
                 <div class="sum-card danger"><span class="label">Tổng Còn Nợ (Chưa Thu)</span><span class="value" style="color:var(--danger)" id="rep-unpaid">0 đ</span></div>
@@ -250,6 +255,7 @@
                         <thead>
                             <tr>
                                 <th>Tên Khách Hàng</th>
+                                <th>Chi Tiết Số Lượng</th>
                                 <th>Tổng Mua (đ)</th>
                                 <th>Đã Thanh Toán (đ)</th>
                                 <th>Còn Nợ (đ)</th>
@@ -261,7 +267,7 @@
             </div>
         </div>
 
-        <!-- TÍNH NĂNG MỚI: TỔNG KẾT ĐỐI SOÁT -->
+        <!-- TAB 3: TỔNG KẾT ĐỐI SOÁT -->
         <div id="tab-tong-ket" class="tab-content">
             <div class="card" style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
                 <div class="form-group" style="margin: 0; min-width: 200px;">
@@ -405,7 +411,10 @@
                 <div class="card" style="padding: 0;">
                     <div class="card-header" style="margin: 20px 20px 0 20px;">
                         Danh Sách Khách Hàng
-                        <button class="btn btn-success" style="font-size:12px;" onclick="exportCustomersExcel()">Xuất Excel</button>
+                        <div>
+                            <button class="btn btn-purple" style="font-size:12px; margin-right: 5px;" onclick="syncPrices()">🔄 Đồng Bộ Giá Toàn Hệ Thống</button>
+                            <button class="btn btn-success" style="font-size:12px;" onclick="exportCustomersExcel()">Xuất Excel</button>
+                        </div>
                     </div>
                     <div class="table-responsive" style="padding: 0 20px 20px 20px;">
                         <table id="table-customers">
@@ -481,6 +490,11 @@
 
         <!-- TAB 6: HỆ THỐNG (LỊCH SỬ) -->
         <div id="tab-he-thong" class="tab-content">
+            <div class="card">
+                <div class="card-header">Công Cụ Quản Trị</div>
+                <button class="btn btn-purple" onclick="syncPrices()">🔄 Cập Nhật/Đồng Bộ Lại Giá Cho Toàn Bộ Sổ Giao Dịch Cũ</button>
+                <p style="font-size: 13px; color: var(--text-muted); margin-top: 5px;">Sử dụng tính năng này sau khi bạn thay đổi bảng giá của các nhà hàng. Hệ thống sẽ quét sổ và nhân lại toàn bộ giá tiền tự động.</p>
+            </div>
             <div class="grid-2">
                 <div class="card" style="padding: 0;">
                     <div class="card-header" style="margin: 20px 20px 0 20px;">
@@ -562,7 +576,7 @@
         const analytics = getAnalytics(app);
         const database = getDatabase(app);
 
-        // Biến cục bộ chạy Runtime lưu dữ liệu đồng bộ từ Cloud về (Bổ sung thêm reconciliations)
+        // Biến cục bộ chạy Runtime lưu dữ liệu đồng bộ từ Cloud về
         window.CLOUD_DATA = { users: {}, customers: [], records: [], logs: [], reconciliations: [] };
 
         // Lắng nghe biến động dữ liệu trực tuyến từ Cloud
@@ -683,7 +697,7 @@
             if (!localStorage.getItem(DB_PREFIX + 'customers')) dbSet('customers', []);
             if (!localStorage.getItem(DB_PREFIX + 'records')) dbSet('records', []);
             if (!localStorage.getItem(DB_PREFIX + 'logs')) dbSet('logs', [{id: "log_init", time: new Date().toLocaleString('vi-VN'), timeISO: new Date().toISOString(), user: 'Hệ thống', action: 'Khởi tạo hệ thống Lương Ngọc Minh.', details: ''}]);
-            if (!localStorage.getItem(DB_PREFIX + 'reconciliations')) dbSet('reconciliations', []); // Data Đối Soát
+            if (!localStorage.getItem(DB_PREFIX + 'reconciliations')) dbSet('reconciliations', []); 
         }
 
         function login() {
@@ -693,7 +707,7 @@
 
             if (users[u] && users[u].password === p) {
                 currentUser = users[u];
-                window.currentUser = currentUser; // Đẩy biến currentUser ra global cho Firebase sử dụng
+                window.currentUser = currentUser; 
                 addLog("Đăng nhập");
                 
                 document.getElementById('login-screen').classList.add('hidden');
@@ -718,7 +732,7 @@
         function logout() {
             if(currentUser) addLog("Đăng xuất");
             currentUser = null;
-            window.currentUser = null; // Xóa trạng thái đăng nhập global
+            window.currentUser = null; 
             document.getElementById('login-username').value = '';
             document.getElementById('login-password').value = '';
             document.getElementById('login-screen').classList.remove('hidden');
@@ -756,7 +770,7 @@
 
             if (currentUser.role === 'admin') { loadUsers(); loadLogs(); loadTrash(); }
         }
-        window.loadAllData = loadAllData; // Đẩy hàm làm mới ra global để cập nhật UI tự động khi Cloud đổi
+        window.loadAllData = loadAllData; 
 
         // --- CUSTOMERS ---
         function toggleIcePrice(type) {
@@ -832,6 +846,55 @@
             customers.forEach(c => { select.innerHTML += `<option value="${c.id}">${c.name}</option>`; });
             if(currentSelected && customers.find(c => c.id == currentSelected)) select.value = currentSelected;
         }
+
+        // --- TÍNH NĂNG ĐỒNG BỘ GIÁ ---
+        window.syncPrices = function() {
+            if (!hasPermission('edit_record') && currentUser.role !== 'admin') {
+                return showToast('Bạn không có quyền đồng bộ giá!', 'error');
+            }
+            if (!confirm('CẢNH BÁO!\n\nTính năng này sẽ rà soát lại TOÀN BỘ cuốn sổ. Nếu phát hiện giao dịch cũ nào có giá không khớp với BẢNG GIÁ HIỆN TẠI của nhà hàng, hệ thống sẽ tự động CẬP NHẬT LẠI GIÁ TIỀN và nhân lại thành tiền.\n\nBạn có chắc chắn muốn thực hiện việc đồng bộ này không?')) return;
+
+            let records = dbGet('records');
+            let customers = dbGet('customers');
+            let updateCount = 0;
+
+            let newRecords = records.map(r => {
+                if (r.isDeleted) return r; // Bỏ qua giao dịch đã xóa
+                
+                // LỖI NẰM Ở ĐÂY: Sửa === thành == để tránh lỗi ép kiểu dữ liệu ID của Database (String vs Number)
+                let cust = customers.find(c => c.id == r.custId && !c.isDeleted);
+                
+                if (cust) {
+                    // Tự động đồng bộ luôn cả tên KH nếu bạn có thay đổi tên nhà hàng
+                    if (r.custNameSnapshot !== cust.name) {
+                        r.custNameSnapshot = cust.name;
+                        updateCount++;
+                    }
+
+                    if (cust.prices && cust.prices[r.iceType] !== undefined) {
+                        let currentPrice = Number(cust.prices[r.iceType]);
+                        let oldPrice = Number(r.price || 0);
+                        
+                        // Nếu giá cũ trong sổ khác với giá mới của nhà hàng
+                        if (oldPrice !== currentPrice) {
+                            r.price = currentPrice;
+                            r.totalMoney = Number(r.quantity) * currentPrice; // Nhân lại tiền
+                            updateCount++;
+                        }
+                    }
+                }
+                return r;
+            });
+
+            if (updateCount > 0) {
+                dbSet('records', newRecords);
+                addLog("Đồng bộ giá hàng loạt", `Hệ thống tự động điều chỉnh giá cho các giao dịch.`);
+                showToast(`Thành công! Đã quét và cập nhật lại dữ liệu cho ${updateCount} giao dịch.`, 'success');
+                loadAllData(); // Làm mới lại UI
+            } else {
+                showToast('Không có thay đổi nào. Mọi giao dịch cũ đều đã khớp với bảng giá hiện tại của các khách hàng.', 'info');
+            }
+        };
 
         // --- DAILY TRANSACTIONS ---
         function updateIceTypeDropdown() {
@@ -973,7 +1036,6 @@
             tbody.appendChild(tr);
         }
 
-        // Nén ảnh bằng Canvas trước khi lưu vào LocalStorage
         function processImage(file) {
             return new Promise((resolve) => {
                 const reader = new FileReader();
@@ -983,13 +1045,13 @@
                     img.src = e.target.result;
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 600; // Giới hạn kích thước để tiết kiệm db
+                        const MAX_WIDTH = 600; 
                         const scale = img.width > MAX_WIDTH ? MAX_WIDTH / img.width : 1;
                         canvas.width = img.width * scale;
                         canvas.height = img.height * scale;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.6)); // Nén JPEG 60%
+                        resolve(canvas.toDataURL('image/jpeg', 0.6)); 
                     }
                 }
             });
@@ -1062,7 +1124,7 @@
             const rows = document.getElementById('recon-cust-body').querySelectorAll('tr');
             rows.forEach(tr => {
                 const inputs = tr.querySelectorAll('input');
-                if(inputs[0].value || inputs[2].value) { // Nếu có ngày hoặc số lượng
+                if(inputs[0].value || inputs[2].value) {
                     customerDetails.push({
                         date: inputs[0].value, type: inputs[1].value, 
                         qty: inputs[2].value, total: inputs[3].value
@@ -1083,14 +1145,13 @@
 
             if(idx > -1) recons[idx] = data; else recons.push(data);
             
-            // Xử lý cẩn thận nếu vượt giới hạn LocalStorage
             try {
                 dbSet('reconciliations', recons);
                 addLog("Lưu Đối Soát", `Đối soát tháng ${month} cho khách ID: ${custId}`);
                 showToast('Lưu số liệu đối soát thành công!');
             } catch(e) {
                 showToast('Lỗi bộ nhớ! Hãy xóa bớt ảnh cũ đi để lưu tiếp.', 'error');
-                recons[idx].images = []; // Thử lưu không có ảnh
+                recons[idx].images = []; 
                 dbSet('reconciliations', recons);
             }
         }
@@ -1112,7 +1173,7 @@
                 const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
                 
                 const tbody = document.getElementById('recon-cust-body');
-                tbody.innerHTML = ''; // Clear old rows
+                tbody.innerHTML = ''; 
                 
                 json.forEach(row => {
                     let date = row["Ngay (YYYY-MM-DD)"] || row["Ngày"] || "";
@@ -1164,7 +1225,6 @@
                 }
             });
 
-            // Gắn tổng cộng của khách vào ô tổng quan
             ws_data[3][2] = sumCQty;
             ws_data[4][2] = sumCMoney;
 
@@ -1174,7 +1234,76 @@
             XLSX.writeFile(wb, `Doi_Soat_${custName}_Thang_${month}.xlsx`);
         }
 
-        // --- EXPORT CÁC MỤC CŨ ---
+        // --- CẬP NHẬT: EXCEL BÁO CÁO CŨ (THÊM CỘT SỐ LƯỢNG) ---
+        window.generateReport = function() {
+            const start = document.getElementById('report-start').value, end = document.getElementById('report-end').value;
+            const records = dbGet('records').filter(r => !r.isDeleted && r.date >= start && r.date <= end);
+            
+            const reportMap = {}; 
+            let sumTotal = 0, sumPaid = 0, sumUnpaid = 0, sumQty = 0;
+            
+            records.forEach(r => {
+                sumTotal += r.totalMoney; 
+                sumQty += r.quantity;
+                
+                if(r.status === 'Đã thanh toán') sumPaid += r.totalMoney; else sumUnpaid += r.totalMoney;
+                
+                if(!reportMap[r.custNameSnapshot]) reportMap[r.custNameSnapshot] = { total: 0, paid: 0, unpaid: 0, totalQty: 0, qtyDetails: {} };
+                
+                reportMap[r.custNameSnapshot].total += r.totalMoney;
+                reportMap[r.custNameSnapshot].totalQty += r.quantity;
+                
+                if(!reportMap[r.custNameSnapshot].qtyDetails[r.iceType]) reportMap[r.custNameSnapshot].qtyDetails[r.iceType] = 0;
+                reportMap[r.custNameSnapshot].qtyDetails[r.iceType] += r.quantity;
+
+                if(r.status === 'Đã thanh toán') reportMap[r.custNameSnapshot].paid += r.totalMoney; else reportMap[r.custNameSnapshot].unpaid += r.totalMoney;
+            });
+            
+            document.getElementById('rep-total').innerText = formatMoney(sumTotal) + ' đ'; 
+            document.getElementById('rep-paid').innerText = formatMoney(sumPaid) + ' đ'; 
+            document.getElementById('rep-unpaid').innerText = formatMoney(sumUnpaid) + ' đ';
+            document.getElementById('rep-total-qty').innerText = formatMoney(sumQty);
+
+            const tbody = document.getElementById('body-report'); tbody.innerHTML = '';
+            Object.keys(reportMap).forEach(k => {
+                const rep = reportMap[k];
+                let qtyStr = Object.keys(rep.qtyDetails).map(ice => `${ICE_NAMES[ice]}: ${rep.qtyDetails[ice]}`).join(', ');
+                let fullQtyStr = `<b>Tổng cộng: ${rep.totalQty} túi</b><br><span style="font-size:11px; color:gray;">(${qtyStr})</span>`;
+
+                tbody.innerHTML += `<tr><td style="font-weight:bold;">${k}</td><td>${fullQtyStr}</td><td>${formatMoney(rep.total)} đ</td><td style="color:var(--success)">${formatMoney(rep.paid)} đ</td><td style="color:var(--danger); font-weight:bold;">${formatMoney(rep.unpaid)} đ</td></tr>`;
+            });
+        };
+
+        window.exportReportExcel = function() {
+            const start = document.getElementById('report-start').value; const end = document.getElementById('report-end').value;
+            const records = dbGet('records').filter(r => !r.isDeleted && r.date >= start && r.date <= end);
+            if(records.length === 0) return showToast('Không có dữ liệu', 'error');
+            
+            const reportMap = {};
+            records.forEach(r => {
+                if(!reportMap[r.custNameSnapshot]) reportMap[r.custNameSnapshot] = { "Khách Hàng": r.custNameSnapshot, "Chi Tiết Số Lượng": "", "Tổng Túi": 0, "Tổng Mua": 0, "Đã Thanh Toán": 0, "Còn Nợ": 0, "_qtyDetails": {} };
+                
+                reportMap[r.custNameSnapshot]["Tổng Mua"] += r.totalMoney;
+                reportMap[r.custNameSnapshot]["Tổng Túi"] += r.quantity;
+                
+                if(!reportMap[r.custNameSnapshot]._qtyDetails[r.iceType]) reportMap[r.custNameSnapshot]._qtyDetails[r.iceType] = 0;
+                reportMap[r.custNameSnapshot]._qtyDetails[r.iceType] += r.quantity;
+
+                if(r.status === 'Đã thanh toán') reportMap[r.custNameSnapshot]["Đã Thanh Toán"] += r.totalMoney; else reportMap[r.custNameSnapshot]["Còn Nợ"] += r.totalMoney;
+            });
+
+            // Chuyển object chi tiết thành chuỗi
+            const finalData = Object.values(reportMap).map(row => {
+                row["Chi Tiết Số Lượng"] = Object.keys(row._qtyDetails).map(ice => `${ICE_NAMES[ice]}: ${row._qtyDetails[ice]}`).join(', ');
+                delete row._qtyDetails;
+                return row;
+            });
+
+            const ws = XLSX.utils.json_to_sheet(finalData); applyStylesToWorksheet(ws);
+            const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Bao_Cao"); XLSX.writeFile(wb, `Bao_Cao_Doanh_Thu_Tu_${start}_Den_${end}.xlsx`);
+        };
+
+
         function exportCustomersExcel() {
             const data = dbGet('customers').filter(c => !c.isDeleted).map(c => {
                 let priceStr = Object.keys(c.prices).map(k => `${ICE_NAMES[k]}: ${c.prices[k]}`).join(', ');
@@ -1212,48 +1341,21 @@
             const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Thung_Rac"); XLSX.writeFile(wb, "Lich_Su_Xoa.xlsx");
         }
 
-        // --- QUẢN LÝ TÀI KHOẢN (ADMIN) & REPORTS CŨ ---
-        function generateReport() {
-            const start = document.getElementById('report-start').value, end = document.getElementById('report-end').value;
-            const records = dbGet('records').filter(r => !r.isDeleted && r.date >= start && r.date <= end);
-            const reportMap = {}; let sumTotal = 0, sumPaid = 0, sumUnpaid = 0;
-            records.forEach(r => {
-                sumTotal += r.totalMoney; if(r.status === 'Đã thanh toán') sumPaid += r.totalMoney; else sumUnpaid += r.totalMoney;
-                if(!reportMap[r.custNameSnapshot]) reportMap[r.custNameSnapshot] = { total: 0, paid: 0, unpaid: 0 };
-                reportMap[r.custNameSnapshot].total += r.totalMoney;
-                if(r.status === 'Đã thanh toán') reportMap[r.custNameSnapshot].paid += r.totalMoney; else reportMap[r.custNameSnapshot].unpaid += r.totalMoney;
-            });
-            document.getElementById('rep-total').innerText = formatMoney(sumTotal) + ' đ'; document.getElementById('rep-paid').innerText = formatMoney(sumPaid) + ' đ'; document.getElementById('rep-unpaid').innerText = formatMoney(sumUnpaid) + ' đ';
-            const tbody = document.getElementById('body-report'); tbody.innerHTML = '';
-            Object.keys(reportMap).forEach(k => {
-                const rep = reportMap[k];
-                tbody.innerHTML += `<tr><td style="font-weight:bold;">${k}</td><td>${formatMoney(rep.total)} đ</td><td style="color:var(--success)">${formatMoney(rep.paid)} đ</td><td style="color:var(--danger); font-weight:bold;">${formatMoney(rep.unpaid)} đ</td></tr>`;
-            });
-        }
-        function exportReportExcel() { /* Giữ nguyên hàm cũ */ 
-            const start = document.getElementById('report-start').value; const end = document.getElementById('report-end').value;
-            const records = dbGet('records').filter(r => !r.isDeleted && r.date >= start && r.date <= end);
-            if(records.length === 0) return showToast('Không có dữ liệu', 'error');
-            const reportMap = {};
-            records.forEach(r => {
-                if(!reportMap[r.custNameSnapshot]) reportMap[r.custNameSnapshot] = { "Khách Hàng": r.custNameSnapshot, "Tổng Mua": 0, "Đã Thanh Toán": 0, "Còn Nợ": 0 };
-                reportMap[r.custNameSnapshot]["Tổng Mua"] += r.totalMoney;
-                if(r.status === 'Đã thanh toán') reportMap[r.custNameSnapshot]["Đã Thanh Toán"] += r.totalMoney; else reportMap[r.custNameSnapshot]["Còn Nợ"] += r.totalMoney;
-            });
-            const ws = XLSX.utils.json_to_sheet(Object.values(reportMap)); applyStylesToWorksheet(ws);
-            const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Bao_Cao"); XLSX.writeFile(wb, `Bao_Cao_Doanh_Thu_Tu_${start}_Den_${end}.xlsx`);
-        }
-        function exportDailyExcel() { /* Giữ nguyên hàm cũ */ 
+        function exportDailyExcel() { 
             const date = document.getElementById('filter-date').value; const records = dbGet('records').filter(r => r.date === date && !r.isDeleted);
             if(records.length === 0) return showToast('Không có dữ liệu!', 'error');
             const ws = XLSX.utils.json_to_sheet(records.map(r => ({"Ngày": r.date, "Khách Hàng": r.custNameSnapshot, "Loại Đá": ICE_NAMES[r.iceType], "Số Lượng": r.quantity, "Đơn Giá": r.price, "Thành Tiền": r.totalMoney, "Trạng Thái": r.status, "Ghi Chú": r.note || ''})));
             applyStylesToWorksheet(ws); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, `So_Ngay_${date}`); XLSX.writeFile(wb, `So_Ngay_${date}_LNM.xlsx`);
         }
-        function downloadExcelTemplate() { /* Giữ nguyên */ 
+        window.exportDailyExcel = exportDailyExcel;
+
+        function downloadExcelTemplate() { 
             const ws = XLSX.utils.aoa_to_sheet([["Ngay", "Ten Khach Hang", "Loai Da (vien/bi/uop/ngo/bao)", "So Luong", "Trang Thai (Da thanh toan/Chua thanh toan)", "Ghi Chu"]]);
             applyStylesToWorksheet(ws); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Mau_Nhap"); XLSX.writeFile(wb, "Mau_Nhap_So_Ghi_Da.xlsx");
         }
-        function importExcel(e) { /* Giữ nguyên */ 
+        window.downloadExcelTemplate = downloadExcelTemplate;
+
+        function importExcel(e) { 
             const file = e.target.files[0]; if(!file) return;
             const reader = new FileReader();
             reader.onload = function(ev) {
@@ -1276,6 +1378,7 @@
             };
             reader.readAsArrayBuffer(file);
         }
+        window.importExcel = importExcel;
 
         function createUser() {
             const u = document.getElementById('user-username').value.trim().toLowerCase(), p = document.getElementById('user-password').value.trim(), f = document.getElementById('new-user-fullname').value.trim();
