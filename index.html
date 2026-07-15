@@ -86,6 +86,9 @@
         .toast.success { border-left-color: var(--success); }
         .toast.info { border-left-color: var(--warning); }
         @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+
+        /* Checkbox styling cho mục thanh toán */
+        .check-day { width: 18px; height: 18px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -125,6 +128,7 @@
             <button class="tab-btn active" onclick="switchTab('tab-so-sach')">📝 Sổ Giao Dịch</button>
             <button class="tab-btn" onclick="switchTab('tab-bao-cao')">📊 Báo Cáo KQKD</button>
             <button class="tab-btn" onclick="switchTab('tab-tong-ket')">🗓️ Tổng Kết & Đối Soát</button>
+            <button class="tab-btn" onclick="switchTab('tab-thanh-toan')">💰 Thanh Toán Nợ</button>
             <button class="tab-btn admin-only hidden" onclick="switchTab('tab-khach-hang')">🏢 Khách Hàng</button>
             <button class="tab-btn admin-only hidden" onclick="switchTab('tab-nhan-vien')">👥 Nhân Sự</button>
             <button class="tab-btn admin-only hidden" onclick="switchTab('tab-he-thong')">⚙️ Hệ Thống</button>
@@ -241,7 +245,6 @@
             </div>
 
             <div class="summary-box">
-                <!-- Thêm thẻ tổng số lượng túi -->
                 <div class="sum-card purple"><span class="label">Tổng Số Lượng (Túi)</span><span class="value" style="color:var(--purple)" id="rep-total-qty">0</span></div>
                 <div class="sum-card"><span class="label">Tổng Giao Dịch (Kỳ)</span><span class="value" id="rep-total">0 đ</span></div>
                 <div class="sum-card success"><span class="label">Tổng Đã Thu</span><span class="value" style="color:var(--success)" id="rep-paid">0 đ</span></div>
@@ -283,7 +286,6 @@
             </div>
 
             <div class="grid-2">
-                <!-- Cột trái: Hệ thống + Ảnh -->
                 <div>
                     <div class="card" style="background-color: #f8fafc; border-left: 4px solid var(--primary);">
                         <div class="card-header" style="color:var(--primary); font-size: 15px;">Phần 1: Số Liệu Hệ Thống Ghi Nhận</div>
@@ -309,12 +311,10 @@
                             <input type="file" id="recon-image-upload" accept="image/*" class="hidden" multiple onchange="handleReconImages(event)">
                         </label>
                         <div id="recon-image-preview" class="img-preview-container">
-                            <!-- Ảnh preview sẽ hiển thị ở đây -->
                         </div>
                     </div>
                 </div>
 
-                <!-- Cột phải: Nhập tay từ KH + So Sánh -->
                 <div>
                     <div class="card" style="border-left: 4px solid var(--warning);">
                         <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
@@ -339,7 +339,6 @@
                                     </tr>
                                 </thead>
                                 <tbody id="recon-cust-body">
-                                    <!-- Dữ liệu nhập tay -->
                                 </tbody>
                             </table>
                         </div>
@@ -362,6 +361,56 @@
                             Hai bên khớp số liệu.
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB THANH TOÁN (MỚI) -->
+        <div id="tab-thanh-toan" class="tab-content">
+            <div class="card" style="border-left: 5px solid var(--success);">
+                <div class="card-header">Chọn Thông Tin Cần Thanh Toán</div>
+                <div style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+                    <div class="form-group" style="margin: 0; min-width: 250px;">
+                        <label>Khách Hàng (Nhà hàng):</label>
+                        <select id="pay-customer" class="form-control" onchange="loadPaymentData()">
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin: 0; min-width: 200px;">
+                        <label>Trong tháng:</label>
+                        <input type="month" id="pay-month" class="form-control" onchange="loadPaymentData()">
+                    </div>
+                    <button class="btn btn-primary" onclick="loadPaymentData()">🔄 Tải Dữ Liệu</button>
+                </div>
+            </div>
+
+            <div class="card" style="padding: 0;" id="pay-data-container">
+                <div class="card-header" style="margin: 20px 20px 0 20px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+                    <span>Bảng Kê Chi Tiết Các Ngày Trong Tháng</span>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-outline" onclick="paySelectedDays()">☑️ Thanh toán ngày Đã Chọn</button>
+                        <button class="btn btn-success" onclick="payAllMonth()">💰 Thanh toán TẤT CẢ (Hết nợ)</button>
+                    </div>
+                </div>
+                <div class="table-responsive" style="padding: 0 20px 20px 20px;">
+                    <table id="table-payment">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px; text-align: center;">
+                                    <input type="checkbox" id="pay-check-all" class="check-day" onchange="toggleCheckAllPayment(this)">
+                                </th>
+                                <th>Ngày</th>
+                                <th>Tổng Mua</th>
+                                <th>Đã Thanh Toán</th>
+                                <th>Còn Nợ</th>
+                                <th>Trạng Thái</th>
+                            </tr>
+                        </thead>
+                        <tbody id="body-payment">
+                            <tr><td colspan="6" style="text-align: center; color: gray;">Vui lòng chọn khách hàng và tháng để xem.</td></tr>
+                        </tbody>
+                        <tfoot id="foot-payment" style="font-weight: bold; background-color: #f8fafc;">
+                        </tfoot>
+                    </table>
                 </div>
             </div>
         </div>
@@ -412,7 +461,7 @@
                     <div class="card-header" style="margin: 20px 20px 0 20px;">
                         Danh Sách Khách Hàng
                         <div>
-                            <button class="btn btn-purple" style="font-size:12px; margin-right: 5px;" onclick="syncPrices()">🔄 Đồng Bộ Giá Toàn Hệ Thống</button>
+                            <button class="btn btn-purple" style="font-size:12px; margin-right: 5px;" onclick="syncPrices()">🔄 Đồng Bộ Giá</button>
                             <button class="btn btn-success" style="font-size:12px;" onclick="exportCustomersExcel()">Xuất Excel</button>
                         </div>
                     </div>
@@ -555,10 +604,9 @@
 
     </div>
 
+    <!-- MODULE SCRIPT ĐỂ KẾT NỐI FIREBASE (SẼ CHẠY SAU KHI HTML TẢI XONG) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-analytics.js";
-        // Import thêm Database để lưu trữ số liệu
         import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js";
 
         const firebaseConfig = {
@@ -571,15 +619,11 @@
             measurementId: "G-2JXS6RQH92"
         };
 
-        // Khởi tạo Firebase
         const app = initializeApp(firebaseConfig);
-        const analytics = getAnalytics(app);
         const database = getDatabase(app);
 
-        // Biến cục bộ chạy Runtime lưu dữ liệu đồng bộ từ Cloud về
         window.CLOUD_DATA = { users: {}, customers: [], records: [], logs: [], reconciliations: [] };
 
-        // Lắng nghe biến động dữ liệu trực tuyến từ Cloud
         function listenToCloudChanges() {
             const dbRef = ref(database);
             onValue(dbRef, (snapshot) => {
@@ -600,7 +644,7 @@
             });
         }
 
-        // Đẩy dữ liệu từ RAM lên Cloud Database
+        // Định nghĩa lại hàm đẩy Cloud
         window.dbSet = function(k, v) {
             if (Array.isArray(v)) {
                 let dataObj = {};
@@ -618,15 +662,21 @@
         listenToCloudChanges();
     </script>
 
+    <!-- KỊCH BẢN THÔNG THƯỜNG (CHẠY NGAY TỨC THÌ) -->
     <script>
         const ICE_NAMES = { vien: "Đá Viên", bi: "Đá Bi", uop: "Đá Ướp", ngo: "Đá Ngô", bao: "Đá Bào" };
         const DB_PREFIX = "lm_";
 
-        const dbGet = (k) => window.dbGet ? window.dbGet(k) : (JSON.parse(localStorage.getItem(DB_PREFIX + k)) || (k === 'users' ? {} : []));
+        // FALLBACK: Đảm bảo không bao giờ bị lỗi TypeError kể cả khi Firebase module chưa tải xong
+        const dbGet = (k) => {
+            if (typeof window.dbGet === 'function') return window.dbGet(k);
+            return JSON.parse(localStorage.getItem(DB_PREFIX + k)) || (k === 'users' ? {} : []);
+        };
         const dbSet = (k, v) => {
-            if (window.dbSet) window.dbSet(k, v);
+            if (typeof window.dbSet === 'function') window.dbSet(k, v);
             else localStorage.setItem(DB_PREFIX + k, JSON.stringify(v));
         };
+
         const formatMoney = (m) => parseFloat(m || 0).toLocaleString('vi-VN');
         
         function hasPermission(perm) {
@@ -693,6 +743,7 @@
         }
 
         function initDB() {
+            // SỬ DỤNG dbSet (đã được bọc an toàn) THAY VÌ window.dbSet TRỰC TIẾP ĐỂ TRÁNH LỖI TYPEERROR
             if (!localStorage.getItem(DB_PREFIX + 'users')) dbSet('users', { 'admin': { username: 'admin', password: 'admin123', fullname: 'Quản Trị Viên', role: 'admin', canDeleteAll: true } });
             if (!localStorage.getItem(DB_PREFIX + 'customers')) dbSet('customers', []);
             if (!localStorage.getItem(DB_PREFIX + 'records')) dbSet('records', []);
@@ -723,6 +774,7 @@
                 document.getElementById('report-start').value = `${now.getFullYear()}-01-01`;
                 document.getElementById('report-end').value = getTodayStr();
                 document.getElementById('recon-month').value = getCurrentMonthStr();
+                document.getElementById('pay-month').value = getCurrentMonthStr();
 
                 switchTab('tab-so-sach');
                 showToast(`Chào mừng ${currentUser.fullname}!`);
@@ -763,6 +815,10 @@
             if(document.getElementById('tab-tong-ket').classList.contains('active')) {
                 populateReconCustomers();
                 loadReconData();
+            }
+            if(document.getElementById('tab-thanh-toan').classList.contains('active')) {
+                loadPaymentCustomers();
+                loadPaymentData();
             }
             
             document.getElementById('profile-fullname').value = currentUser.fullname;
@@ -860,19 +916,15 @@
 
             let newRecords = records.map(r => {
                 if (r.isDeleted) return r;
-                
                 let cust = customers.find(c => c.id == r.custId && !c.isDeleted);
-                
                 if (cust) {
                     if (r.custNameSnapshot !== cust.name) {
                         r.custNameSnapshot = cust.name;
                         updateCount++;
                     }
-
                     if (cust.prices && cust.prices[r.iceType] !== undefined) {
                         let currentPrice = Number(cust.prices[r.iceType]);
                         let oldPrice = Number(r.price || 0);
-                        
                         if (oldPrice !== currentPrice) {
                             r.price = currentPrice;
                             r.totalMoney = Number(r.quantity) * currentPrice; 
@@ -983,7 +1035,6 @@
             const month = document.getElementById('recon-month').value;
             const custId = document.getElementById('recon-customer').value;
             
-            // Reset UI
             document.getElementById('recon-sys-qty').innerHTML = "0";
             document.getElementById('recon-sys-debt').innerText = "0 đ";
             document.getElementById('recon-cust-body').innerHTML = "";
@@ -994,7 +1045,6 @@
 
             if (!month || !custId) return;
 
-            // 1. Lấy dữ liệu hệ thống (Chỉ tính giao dịch "Chưa thanh toán" trong tháng)
             const records = dbGet('records').filter(r => !r.isDeleted && r.custId === custId && r.date.startsWith(month) && r.status === "Chưa thanh toán");
             let sysDebt = 0;
             let sysQtyByType = {};
@@ -1016,7 +1066,6 @@
             document.getElementById('recon-sys-qty').innerHTML = sysHtml;
             document.getElementById('recon-sys-debt').innerText = formatMoney(sysDebt) + ' đ';
 
-            // 2. Lấy dữ liệu đã lưu (nếu có)
             const recons = dbGet('reconciliations');
             const reconId = `${custId}_${month}`;
             const existing = recons.find(r => r.id === reconId);
@@ -1173,7 +1222,6 @@
             }
 
             const diffMoney = sysMoney - custMoney;
-
             const qtyEl = document.getElementById('recon-diff-qty');
             const moneyEl = document.getElementById('recon-diff-money');
             const statusEl = document.getElementById('recon-status-text');
@@ -1181,7 +1229,6 @@
             qtyEl.innerHTML = diffHtml;
             qtyEl.style.textAlign = 'left';
             moneyEl.innerText = formatMoney(diffMoney) + " đ";
-
             moneyEl.style.color = diffMoney === 0 ? "var(--success)" : "var(--danger)";
 
             if(allMatchedQty && diffMoney === 0) {
@@ -1205,10 +1252,7 @@
                 const moneyVal = tr.querySelector('.rec-c-money').value;
                 
                 if(dateVal || qtyVal || typeVal) {
-                    customerDetails.push({
-                        date: dateVal, type: typeVal, 
-                        qty: qtyVal, total: moneyVal
-                    });
+                    customerDetails.push({ date: dateVal, type: typeVal, qty: qtyVal, total: moneyVal });
                 }
             });
 
@@ -1246,8 +1290,6 @@
 
         function importReconExcel(e) {
             const file = e.target.files[0]; if(!file) return;
-
-            // Cần chọn Khách Hàng trước để hệ thống biết đơn giá từng loại đá của khách này
             const custId = document.getElementById('recon-customer').value;
             if (!custId) {
                 showToast('Vui lòng chọn Khách Hàng trước khi nhập Excel để hệ thống tự tính Thành Tiền!', 'error');
@@ -1280,22 +1322,19 @@
                     else if(tLow.includes('bao')) typeKey = 'bao';
                     else if(tLow.includes('vien') || tLow.includes('viên')) typeKey = 'vien';
 
-                    // Tự động tính Thành Tiền = Số Lượng x Đơn Giá (lấy theo đơn giá của khách hàng đã cấu hình sẵn trên hệ thống)
                     let total = 0;
                     if (typeKey && cust && cust.prices && cust.prices[typeKey] !== undefined) {
                         const price = parseFloat(cust.prices[typeKey]);
                         total = qty * price;
                     } else {
-                        // Không xác định được đơn giá hệ thống cho loại đá này -> tạm dùng số liệu có sẵn trong file (nếu có) làm dự phòng
                         total = parseFloat(row["Thanh Tien No (VND)"] || row["Thành Tiền"] || 0) || 0;
                         missingPriceCount++;
                     }
-
                     addReconRow(date, typeKey, qty, total);
                 });
                 
                 calculateComparison();
-                let msg = `Đã nhập ${json.length} dòng từ Excel và tự động tính Thành Tiền theo đơn giá hệ thống!`;
+                let msg = `Đã nhập ${json.length} dòng từ Excel và tự động tính Thành Tiền!`;
                 if (missingPriceCount > 0) msg += ` (${missingPriceCount} dòng không xác định được loại đá/đơn giá, tạm lấy số liệu trong file)`;
                 showToast(msg);
                 document.getElementById('recon-excel-upload').value = ''; 
@@ -1310,7 +1349,6 @@
             
             const sel = document.getElementById('recon-customer');
             const custName = sel.options[sel.selectedIndex].text;
-            
             const sysMoney = document.getElementById('recon-sys-debt').innerText;
             const diffMoney = document.getElementById('recon-diff-money').innerText;
 
@@ -1327,7 +1365,6 @@
                 const typeVal = tr.querySelector('.rec-c-type').value;
                 const qtyVal = parseFloat(tr.querySelector('.rec-c-qty').value || 0);
                 const moneyVal = parseFloat(tr.querySelector('.rec-c-money').value || 0);
-                
                 if(typeVal) {
                     if(!custQtyByType[typeVal]) custQtyByType[typeVal] = 0;
                     custQtyByType[typeVal] += qtyVal;
@@ -1363,7 +1400,6 @@
                 const typeText = typeVal ? ICE_NAMES[typeVal] : "";
                 const qtyVal = parseFloat(tr.querySelector('.rec-c-qty').value || 0);
                 const moneyVal = parseFloat(tr.querySelector('.rec-c-money').value || 0);
-                
                 if(dateVal || qtyVal || typeText) {
                     ws_data.push([dateVal, typeText, qtyVal, moneyVal]);
                     sumCQty += qtyVal;
@@ -1374,11 +1410,9 @@
             ws_data[4][2] = sumCMoney;
 
             const ws = XLSX.utils.aoa_to_sheet(ws_data);
-            
             ws['B4'] = { ...ws['B4'], s: { alignment: { wrapText: true, vertical: 'center' } } };
             ws['C4'] = { ...ws['C4'], s: { alignment: { wrapText: true, vertical: 'center' } } };
             ws['D4'] = { ...ws['D4'], s: { alignment: { wrapText: true, vertical: 'center' } } };
-
             applyStylesToWorksheet(ws);
             const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Doi_Soat");
             XLSX.writeFile(wb, `Doi_Soat_${custName}_Thang_${month}.xlsx`);
@@ -1395,11 +1429,9 @@
             records.forEach(r => {
                 sumTotal += r.totalMoney; 
                 sumQty += r.quantity;
-                
                 if(r.status === 'Đã thanh toán') sumPaid += r.totalMoney; else sumUnpaid += r.totalMoney;
                 
                 if(!reportMap[r.custNameSnapshot]) reportMap[r.custNameSnapshot] = { total: 0, paid: 0, unpaid: 0, totalQty: 0, qtyDetails: {} };
-                
                 reportMap[r.custNameSnapshot].total += r.totalMoney;
                 reportMap[r.custNameSnapshot].totalQty += r.quantity;
                 
@@ -1419,7 +1451,6 @@
                 const rep = reportMap[k];
                 let qtyStr = Object.keys(rep.qtyDetails).map(ice => `${ICE_NAMES[ice]}: ${rep.qtyDetails[ice]}`).join(', ');
                 let fullQtyStr = `<b>Tổng cộng: ${rep.totalQty} túi</b><br><span style="font-size:11px; color:gray;">(${qtyStr})</span>`;
-
                 tbody.innerHTML += `<tr><td style="font-weight:bold;">${k}</td><td>${fullQtyStr}</td><td>${formatMoney(rep.total)} đ</td><td style="color:var(--success)">${formatMoney(rep.paid)} đ</td><td style="color:var(--danger); font-weight:bold;">${formatMoney(rep.unpaid)} đ</td></tr>`;
             });
         };
@@ -1432,7 +1463,6 @@
             const reportMap = {};
             records.forEach(r => {
                 if(!reportMap[r.custNameSnapshot]) reportMap[r.custNameSnapshot] = { "Khách Hàng": r.custNameSnapshot, "Chi Tiết Số Lượng": "", "Tổng Túi": 0, "Tổng Mua": 0, "Đã Thanh Toán": 0, "Còn Nợ": 0, "_qtyDetails": {} };
-                
                 reportMap[r.custNameSnapshot]["Tổng Mua"] += r.totalMoney;
                 reportMap[r.custNameSnapshot]["Tổng Túi"] += r.quantity;
                 
@@ -1570,6 +1600,176 @@
             if(idx > -1) { items[idx].isDeleted = false; dbSet(type, items); addLog("Khôi phục", id); showToast('Khôi phục thành công!'); loadTrash(); if(type==='records') loadDailyRecords(); if(type==='customers') loadCustomers(); }
         }
 
+        // ============================================
+        // TÍNH NĂNG MỚI: THANH TOÁN (GẠCH NỢ)
+        // ============================================
+        function loadPaymentCustomers() {
+            const customers = dbGet('customers').filter(c => !c.isDeleted);
+            const select = document.getElementById('pay-customer');
+            let currentSelected = select.value;
+            select.innerHTML = '<option value="">-- Lựa Chọn Khách Hàng --</option>';
+            customers.forEach(c => { select.innerHTML += `<option value="${c.id}">${c.name}</option>`; });
+            if(currentSelected && customers.find(c => c.id == currentSelected)) select.value = currentSelected;
+        }
+
+        function loadPaymentData() {
+            const custId = document.getElementById('pay-customer').value;
+            const monthVal = document.getElementById('pay-month').value; 
+            const tbody = document.getElementById('body-payment');
+            const tfoot = document.getElementById('foot-payment');
+            
+            document.getElementById('pay-check-all').checked = false;
+
+            if (!custId || !monthVal) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: gray;">Vui lòng chọn Nhà Hàng và Tháng để xem công nợ.</td></tr>`;
+                tfoot.innerHTML = '';
+                return;
+            }
+
+            const records = dbGet('records').filter(r => !r.isDeleted && r.custId === custId && r.date.startsWith(monthVal));
+            
+            const groupedByDate = {};
+            records.forEach(r => {
+                if (!groupedByDate[r.date]) {
+                    groupedByDate[r.date] = { total: 0, paid: 0, unpaid: 0 };
+                }
+                groupedByDate[r.date].total += r.totalMoney;
+                if (r.status === 'Đã thanh toán') {
+                    groupedByDate[r.date].paid += r.totalMoney;
+                } else {
+                    groupedByDate[r.date].unpaid += r.totalMoney;
+                }
+            });
+
+            const sortedDates = Object.keys(groupedByDate).sort();
+
+            tbody.innerHTML = '';
+            let sumMonthTotal = 0;
+            let sumMonthPaid = 0;
+            let sumMonthUnpaid = 0;
+
+            if (sortedDates.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: gray;">Không có phát sinh giao dịch nào trong tháng này.</td></tr>`;
+                tfoot.innerHTML = '';
+                return;
+            }
+
+            sortedDates.forEach(date => {
+                const dayData = groupedByDate[date];
+                sumMonthTotal += dayData.total;
+                sumMonthPaid += dayData.paid;
+                sumMonthUnpaid += dayData.unpaid;
+
+                const isFullyPaid = dayData.unpaid === 0;
+                
+                const dateParts = date.split('-');
+                const displayDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+
+                tbody.innerHTML += `
+                    <tr style="${isFullyPaid ? 'background-color: #f0fdf4;' : ''}">
+                        <td style="text-align: center;">
+                            ${!isFullyPaid ? `<input type="checkbox" class="check-day pay-checkbox" value="${date}">` : '<span style="color:var(--success);">✓</span>'}
+                        </td>
+                        <td style="font-weight: 600;">${displayDate}</td>
+                        <td>${formatMoney(dayData.total)} đ</td>
+                        <td style="color: var(--success);">${formatMoney(dayData.paid)} đ</td>
+                        <td style="color: var(--danger); font-weight: bold;">${formatMoney(dayData.unpaid)} đ</td>
+                        <td>
+                            <span class="${isFullyPaid ? 'badge badge-paid' : 'badge badge-unpaid'}">
+                                ${isFullyPaid ? 'Đã thu xong' : 'Còn nợ'}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tfoot.innerHTML = `
+                <tr>
+                    <td colspan="2" style="text-align: right;">TỔNG CỘNG THÁNG:</td>
+                    <td>${formatMoney(sumMonthTotal)} đ</td>
+                    <td style="color: var(--success);">${formatMoney(sumMonthPaid)} đ</td>
+                    <td style="color: var(--danger);">${formatMoney(sumMonthUnpaid)} đ</td>
+                    <td></td>
+                </tr>
+            `;
+        }
+
+        function toggleCheckAllPayment(source) {
+            const checkboxes = document.querySelectorAll('.pay-checkbox');
+            checkboxes.forEach(cb => cb.checked = source.checked);
+        }
+
+        function paySelectedDays() {
+            if (!hasPermission('edit_record')) return showToast('Bạn không có quyền sửa giao dịch!', 'error');
+            const custId = document.getElementById('pay-customer').value;
+            if(!custId) return showToast('Vui lòng chọn khách hàng', 'error');
+
+            const checkboxes = document.querySelectorAll('.pay-checkbox:checked');
+            if (checkboxes.length === 0) return showToast('Bạn chưa tích chọn ngày nào để thanh toán!', 'warning');
+
+            const selectedDates = Array.from(checkboxes).map(cb => cb.value);
+
+            if(!confirm(`Xác nhận GẠCH NỢ cho ${selectedDates.length} ngày đã chọn?`)) return;
+
+            let records = dbGet('records');
+            let updatedCount = 0;
+
+            records = records.map(r => {
+                if (!r.isDeleted && r.custId === custId && selectedDates.includes(r.date) && r.status === 'Chưa thanh toán') {
+                    r.status = 'Đã thanh toán'; 
+                    updatedCount++;
+                }
+                return r;
+            });
+
+            if (updatedCount > 0) {
+                dbSet('records', records);
+                addLog("Thanh toán theo ngày", `Khách ID: ${custId}, Ngày thanh toán: ${selectedDates.join(', ')}`);
+                showToast(`Thành công! Đã gạch nợ ${updatedCount} giao dịch.`, 'success');
+                loadPaymentData(); 
+            } else {
+                showToast('Không có giao dịch nào cần cập nhật.', 'info');
+            }
+        }
+
+        function payAllMonth() {
+            if (!hasPermission('edit_record')) return showToast('Bạn không có quyền sửa giao dịch!', 'error');
+            const custId = document.getElementById('pay-customer').value;
+            const monthVal = document.getElementById('pay-month').value;
+            
+            if(!custId || !monthVal) return showToast('Vui lòng chọn khách hàng và tháng', 'error');
+
+            if(!confirm(`CẢNH BÁO: Xác nhận GẠCH NỢ TẤT CẢ các khoản chưa thanh toán của nhà hàng này trong tháng ${monthVal}?`)) return;
+
+            let records = dbGet('records');
+            let updatedCount = 0;
+
+            records = records.map(r => {
+                if (!r.isDeleted && r.custId === custId && r.date.startsWith(monthVal) && r.status === 'Chưa thanh toán') {
+                    r.status = 'Đã thanh toán';
+                    updatedCount++;
+                }
+                return r;
+            });
+
+            if (updatedCount > 0) {
+                dbSet('records', records);
+                addLog("Thanh toán TOÀN BỘ", `Khách ID: ${custId}, Tháng: ${monthVal}`);
+                showToast(`Tuyệt vời! Đã thanh toán TOÀN BỘ ${updatedCount} giao dịch nợ trong tháng.`, 'success');
+                loadPaymentData(); 
+            } else {
+                showToast('Nhà hàng này hiện không còn khoản nợ nào trong tháng này.', 'info');
+            }
+        }
+
+        // Bộc lộ các hàm ra phạm vi window để sử dụng trực tiếp trên giao diện HTML
+        window.loadPaymentCustomers = loadPaymentCustomers;
+        window.loadPaymentData = loadPaymentData;
+        window.toggleCheckAllPayment = toggleCheckAllPayment;
+        window.paySelectedDays = paySelectedDays;
+        window.payAllMonth = payAllMonth;
+
+        // Khởi động khi mở ứng dụng
         initDB();
 
     </script>
