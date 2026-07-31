@@ -89,6 +89,10 @@
 
         /* Checkbox styling cho mục thanh toán */
         .check-day { width: 18px; height: 18px; cursor: pointer; }
+
+        /* Modal Đồng Bộ Loại Đá */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.55); display: flex; align-items: center; justify-content: center; z-index: 10000; padding: 20px; }
+        .modal-box { background: var(--surface); padding: 24px; border-radius: 12px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.25); }
     </style>
 </head>
 <body>
@@ -462,6 +466,7 @@
                         Danh Sách Khách Hàng
                         <div>
                             <button class="btn btn-purple" style="font-size:12px; margin-right: 5px;" onclick="syncPrices()">🔄 Đồng Bộ Giá</button>
+                            <button class="btn btn-purple" style="font-size:12px; margin-right: 5px;" onclick="openSyncIceTypeModal()">🧊 Đồng Bộ Loại Đá</button>
                             <button class="btn btn-success" style="font-size:12px;" onclick="exportCustomersExcel()">Xuất Excel</button>
                         </div>
                     </div>
@@ -602,6 +607,43 @@
             </div>
         </div>
 
+    </div>
+
+    <!-- MODAL: ĐỒNG BỘ LOẠI ĐÁ -->
+    <div id="modal-sync-ice" class="modal-overlay hidden">
+        <div class="modal-box">
+            <div class="card-header">
+                🧊 Đồng Bộ Loại Đá Cho Khách Hàng
+                <button class="btn btn-outline" style="padding:2px 8px;" onclick="closeSyncIceTypeModal()">✕</button>
+            </div>
+            <p style="font-size:13px; color:var(--text-muted); margin-bottom:15px;">
+                Dùng khi khách hàng đã đổi loại đá đang lấy (VD: từ Đá Viên chuyển sang Đá Bi) nhưng các giao dịch cũ trong sổ vẫn đang ghi nhận sai loại đá cũ. Chọn khách hàng, loại đá đang ghi sai, loại đá đúng, và khoảng ngày cần đồng bộ lại. Hệ thống sẽ tự tính lại đơn giá & thành tiền theo bảng giá hiện tại.
+            </p>
+            <div class="form-group">
+                <label>Khách Hàng</label>
+                <select id="sync-ice-customer" class="form-control" onchange="updateSyncIceOldTypeOptions()"></select>
+            </div>
+            <div class="form-group">
+                <label>Loại Đá Cũ (đang ghi sai trong sổ)</label>
+                <select id="sync-ice-old-type" class="form-control"></select>
+            </div>
+            <div class="form-group">
+                <label>Loại Đá Mới (đúng thực tế)</label>
+                <select id="sync-ice-new-type" class="form-control"></select>
+            </div>
+            <div class="grid-2" style="gap: 10px;">
+                <div class="form-group">
+                    <label>Từ Ngày</label>
+                    <input type="date" id="sync-ice-from" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Đến Ngày</label>
+                    <input type="date" id="sync-ice-to" class="form-control">
+                </div>
+            </div>
+            <p style="font-size:12px;color:var(--text-muted); margin-top: -8px;">Để trống 2 ô ngày nếu muốn áp dụng cho TOÀN BỘ giao dịch (mọi ngày) của khách hàng này.</p>
+            <button class="btn btn-purple" style="width:100%; margin-top:10px;" onclick="runSyncIceType()">Thực Hiện Đồng Bộ</button>
+        </div>
     </div>
 
     <!-- MODULE SCRIPT ĐỂ KẾT NỐI FIREBASE (SẼ CHẠY SAU KHI HTML TẢI XONG) -->
@@ -944,6 +986,95 @@
                 showToast('Không có thay đổi nào. Mọi giao dịch cũ đều đã khớp với bảng giá hiện tại của các khách hàng.', 'info');
             }
         };
+
+        // --- TÍNH NĂNG ĐỒNG BỘ LOẠI ĐÁ ---
+        function openSyncIceTypeModal() {
+            if (!hasPermission('manage_customers') && currentUser.role !== 'admin') return showToast('Bạn không có quyền dùng tính năng này!', 'error');
+            const customers = dbGet('customers').filter(c => !c.isDeleted);
+            const sel = document.getElementById('sync-ice-customer');
+            sel.innerHTML = '<option value="">-- Chọn Khách Hàng --</option>';
+            customers.forEach(c => { sel.innerHTML += `<option value="${c.id}">${c.name}</option>`; });
+            document.getElementById('sync-ice-from').value = '';
+            document.getElementById('sync-ice-to').value = '';
+            updateSyncIceOldTypeOptions();
+            document.getElementById('modal-sync-ice').classList.remove('hidden');
+        }
+        window.openSyncIceTypeModal = openSyncIceTypeModal;
+
+        function closeSyncIceTypeModal() {
+            document.getElementById('modal-sync-ice').classList.add('hidden');
+        }
+        window.closeSyncIceTypeModal = closeSyncIceTypeModal;
+
+        function updateSyncIceOldTypeOptions() {
+            const custId = document.getElementById('sync-ice-customer').value;
+            const oldSel = document.getElementById('sync-ice-old-type');
+            const newSel = document.getElementById('sync-ice-new-type');
+            oldSel.innerHTML = ''; newSel.innerHTML = '';
+
+            // Loại đá cũ: lấy từ các giao dịch đã có của khách hàng này (kể cả loại đá hiện không còn trong bảng giá)
+            let usedTypes = new Set();
+            if (custId) {
+                dbGet('records').filter(r => !r.isDeleted && r.custId === custId).forEach(r => usedTypes.add(r.iceType));
+            }
+            if (usedTypes.size === 0) Object.keys(ICE_NAMES).forEach(k => usedTypes.add(k));
+            usedTypes.forEach(k => { oldSel.innerHTML += `<option value="${k}">${ICE_NAMES[k]}</option>`; });
+
+            // Loại đá mới: chỉ những loại khách hàng đang có giá thiết lập
+            const cust = dbGet('customers').find(c => c.id == custId);
+            let newTypes = (cust && cust.prices) ? Object.keys(cust.prices) : Object.keys(ICE_NAMES);
+            if (newTypes.length === 0) newTypes = Object.keys(ICE_NAMES);
+            newTypes.forEach(k => { newSel.innerHTML += `<option value="${k}">${ICE_NAMES[k]}</option>`; });
+        }
+        window.updateSyncIceOldTypeOptions = updateSyncIceOldTypeOptions;
+
+        function runSyncIceType() {
+            if (!hasPermission('manage_customers') && currentUser.role !== 'admin') return showToast('Bạn không có quyền dùng tính năng này!', 'error');
+
+            const custId = document.getElementById('sync-ice-customer').value;
+            const oldType = document.getElementById('sync-ice-old-type').value;
+            const newType = document.getElementById('sync-ice-new-type').value;
+            const fromDate = document.getElementById('sync-ice-from').value;
+            const toDate = document.getElementById('sync-ice-to').value;
+
+            if (!custId) return showToast('Vui lòng chọn khách hàng!', 'error');
+            if (!oldType || !newType) return showToast('Vui lòng chọn loại đá cũ và loại đá mới!', 'error');
+            if (oldType === newType) return showToast('Loại đá cũ và loại đá mới phải khác nhau!', 'error');
+            if (fromDate && toDate && fromDate > toDate) return showToast('"Từ ngày" phải trước "Đến ngày"!', 'error');
+
+            const customers = dbGet('customers');
+            const cust = customers.find(c => c.id == custId && !c.isDeleted);
+            if (!cust) return showToast('Không tìm thấy khách hàng!', 'error');
+            if (!cust.prices || cust.prices[newType] === undefined) return showToast(`Khách hàng chưa thiết lập giá cho ${ICE_NAMES[newType]}! Vui lòng vào Sửa Khách Hàng để thêm giá trước.`, 'error');
+
+            const newPrice = Number(cust.prices[newType]);
+            let records = dbGet('records');
+
+            const matches = (r) => !r.isDeleted && r.custId === custId && r.iceType === oldType
+                && (!fromDate || r.date >= fromDate) && (!toDate || r.date <= toDate);
+
+            const affectedCount = records.filter(matches).length;
+            if (affectedCount === 0) return showToast('Không tìm thấy giao dịch nào phù hợp để đồng bộ!', 'info');
+
+            const rangeText = (fromDate || toDate) ? `từ ${fromDate || '...'} đến ${toDate || '...'}` : 'toàn bộ thời gian (mọi ngày)';
+            if (!confirm(`Sẽ chuyển ${affectedCount} giao dịch của "${cust.name}" từ "${ICE_NAMES[oldType]}" sang "${ICE_NAMES[newType]}" (${rangeText}).\n\nHệ thống sẽ tự tính lại đơn giá (${formatMoney(newPrice)}đ) và thành tiền cho các giao dịch này.\n\nBạn có chắc chắn muốn thực hiện?`)) return;
+
+            let count = 0;
+            const newRecords = records.map(r => {
+                if (matches(r)) {
+                    count++;
+                    return { ...r, iceType: newType, price: newPrice, totalMoney: Number(r.quantity) * newPrice };
+                }
+                return r;
+            });
+
+            dbSet('records', newRecords);
+            addLog("Đồng bộ loại đá", `${cust.name}: ${ICE_NAMES[oldType]} → ${ICE_NAMES[newType]} (${rangeText}), ${count} giao dịch được cập nhật.`);
+            showToast(`Đã đồng bộ thành công ${count} giao dịch!`, 'success');
+            closeSyncIceTypeModal();
+            loadAllData();
+        }
+        window.runSyncIceType = runSyncIceType;
 
         // --- DAILY TRANSACTIONS ---
         function updateIceTypeDropdown() {
@@ -1528,6 +1659,30 @@
         }
         window.exportDailyExcel = exportDailyExcel;
 
+        // Chuẩn hóa ngày từ Excel (có thể là Date, số serial Excel, hoặc chuỗi dd/mm/yyyy, yyyy-mm-dd...) về dạng "YYYY-MM-DD" để khớp với định dạng ngày dùng trong toàn bộ hệ thống.
+        function normalizeImportDate(value) {
+            if (value === undefined || value === null || value === '') return '';
+            const pad2 = (n) => String(n).padStart(2, '0');
+
+            if (value instanceof Date && !isNaN(value)) {
+                return `${value.getFullYear()}-${pad2(value.getMonth() + 1)}-${pad2(value.getDate())}`;
+            }
+            if (typeof value === 'number') {
+                try {
+                    const d = XLSX.SSF.parse_date_code(value);
+                    if (d && d.y) return `${d.y}-${pad2(d.m)}-${pad2(d.d)}`;
+                } catch (e) {}
+            }
+            const s = String(value).trim();
+            // yyyy-mm-dd hoặc yyyy/mm/dd
+            let m = s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+            if (m) return `${m[1]}-${pad2(m[2])}-${pad2(m[3])}`;
+            // dd-mm-yyyy hoặc dd/mm/yyyy
+            m = s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/);
+            if (m) return `${m[3]}-${pad2(m[2])}-${pad2(m[1])}`;
+            return '';
+        }
+
         function downloadExcelTemplate() { 
             const ws = XLSX.utils.aoa_to_sheet([["Ngay", "Ten Khach Hang", "Loai Da (vien/bi/uop/ngo/bao)", "So Luong", "Trang Thai (Da thanh toan/Chua thanh toan)", "Ghi Chu"]]);
             applyStylesToWorksheet(ws); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Mau_Nhap"); XLSX.writeFile(wb, "Mau_Nhap_So_Ghi_Da.xlsx");
@@ -1538,11 +1693,12 @@
             const file = e.target.files[0]; if(!file) return;
             const reader = new FileReader();
             reader.onload = function(ev) {
-                const workbook = XLSX.read(new Uint8Array(ev.target.result), {type: 'array'});
+                const workbook = XLSX.read(new Uint8Array(ev.target.result), {type: 'array', cellDates: true});
                 const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-                let customers = dbGet('customers'), records = dbGet('records'), successCount = 0;
+                let customers = dbGet('customers'), records = dbGet('records'), successCount = 0, skipCount = 0;
                 json.forEach(row => {
-                    let date = row["Ngay"] || row["Ngày"], cName = row["Ten Khach Hang"] || row["Khách Hàng"], typeRaw = row["Loai Da (vien/bi/uop/ngo/bao)"] || row["Loại Đá"], qty = row["So Luong"] || row["Số Lượng"], status = row["Trang Thai (Da thanh toan/Chua thanh toan)"] || row["Trạng Thái"] || "Chưa thanh toán", note = row["Ghi Chu"] || row["Ghi Chú"] || "";
+                    let rawDate = row["Ngay"] || row["Ngày"], cName = row["Ten Khach Hang"] || row["Khách Hàng"], typeRaw = row["Loai Da (vien/bi/uop/ngo/bao)"] || row["Loại Đá"], qty = row["So Luong"] || row["Số Lượng"], status = row["Trang Thai (Da thanh toan/Chua thanh toan)"] || row["Trạng Thái"] || "Chưa thanh toán", note = row["Ghi Chu"] || row["Ghi Chú"] || "";
+                    let date = normalizeImportDate(rawDate);
                     if(date && cName && typeRaw && qty) {
                         let c = customers.find(x => x.name.toLowerCase() === String(cName).trim().toLowerCase() && !x.isDeleted);
                         if(c) {
@@ -1550,10 +1706,13 @@
                             if(tLow.includes('bi')) iceType = 'bi'; else if(tLow.includes('uop')) iceType = 'uop'; else if(tLow.includes('ngo')) iceType = 'ngo'; else if(tLow.includes('bao')) iceType = 'bao';
                             let price = c.prices[iceType];
                             if(price) { records.push({ id: Date.now().toString()+Math.random(), date, custId: c.id, custNameSnapshot: c.name, iceType, quantity: parseInt(qty), price, totalMoney: price * parseInt(qty), status, note, createdBy: currentUser.username, isDeleted: false }); successCount++; }
-                        }
-                    }
+                            else skipCount++;
+                        } else skipCount++;
+                    } else if (rawDate || cName || typeRaw || qty) skipCount++;
                 });
-                dbSet('records', records); showToast(`Nhập thành công ${successCount} dòng!`); loadDailyRecords(); document.getElementById('import-excel-file').value = ''; 
+                dbSet('records', records);
+                showToast(`Nhập thành công ${successCount} dòng!` + (skipCount > 0 ? ` (Bỏ qua ${skipCount} dòng lỗi/thiếu dữ liệu)` : ''));
+                loadDailyRecords(); loadAllData(); document.getElementById('import-excel-file').value = ''; 
             };
             reader.readAsArrayBuffer(file);
         }
