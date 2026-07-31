@@ -698,7 +698,10 @@
         };
 
         window.dbGet = function(k) {
-            return window.CLOUD_DATA[k] || (k === 'users' ? {} : []);
+            const cloud = window.CLOUD_DATA[k];
+            if (Array.isArray(cloud) && cloud.length > 0) return cloud;
+            if (cloud && !Array.isArray(cloud) && Object.keys(cloud).length > 0) return cloud;
+            return JSON.parse(localStorage.getItem('lm_' + k)) || (k === 'users' ? {} : []);
         };
 
         listenToCloudChanges();
@@ -1113,7 +1116,7 @@
                 records.push({ id: Date.now().toString(), date, custId, custNameSnapshot: cust.name, iceType, quantity: parseInt(qty), price, totalMoney: total, status, note, createdBy: currentUser.username, isDeleted: false });
                 addLog("Tạo giao dịch", `${cust.name}, ${qty} ${ICE_NAMES[iceType]}`); showToast('Lưu thành công');
             }
-            dbSet('records', records); resetRecordForm(); loadDailyRecords();
+            dbSet('records', records); setTimeout(() => { resetRecordForm(); loadDailyRecords(); loadAllData(); }, 800);
         }
 
         function resetRecordForm() {
@@ -1139,7 +1142,7 @@
         }
 
         function loadDailyRecords() {
-            const date = document.getElementById('filter-date').value, records = dbGet('records').filter(r => r.date === date && !r.isDeleted), tbody = document.getElementById('body-daily');
+            const date = document.getElementById('filter-date').value, records = dbGet('records').filter(r => !r.isDeleted && String(r.date).substring(0,10) === date), tbody = document.getElementById('body-daily');
             let sumTotal = 0, sumPaid = 0, sumUnpaid = 0; tbody.innerHTML = '';
             records.forEach(r => {
                 sumTotal += r.totalMoney; if(r.status === 'Đã thanh toán') sumPaid += r.totalMoney; else sumUnpaid += r.totalMoney;
@@ -1661,18 +1664,25 @@
 
         // Chuẩn hóa ngày từ Excel (có thể là Date, số serial Excel, hoặc chuỗi dd/mm/yyyy, yyyy-mm-dd...) về dạng "YYYY-MM-DD" để khớp với định dạng ngày dùng trong toàn bộ hệ thống.
         function normalizeImportDate(value) {
-            if (value === undefined || value === null || value === '') return '';
-            const pad2 = (n) => String(n).padStart(2, '0');
 
-            if (value instanceof Date && !isNaN(value)) {
-                return `${value.getFullYear()}-${pad2(value.getMonth() + 1)}-${pad2(value.getDate())}`;
-            }
-            if (typeof value === 'number') {
-                try {
-                    const d = XLSX.SSF.parse_date_code(value);
-                    if (d && d.y) return `${d.y}-${pad2(d.m)}-${pad2(d.d)}`;
-                } catch (e) {}
-            }
+    if (value === undefined || value === null || value === '')
+        return '';
+
+    const pad2 = (n) => String(n).padStart(2, '0');
+
+    if (value instanceof Date && !isNaN(value)) {
+        const tzOffset = value.getTimezoneOffset() * 60000;
+        const localDate = new Date(value.getTime() - tzOffset);
+        return localDate.toISOString().substring(0,10);
+    }
+
+    if (typeof value === 'number') {
+        try {
+            const d = XLSX.SSF.parse_date_code(value);
+            if (d && d.y)
+                return `${d.y}-${pad2(d.m)}-${pad2(d.d)}`;
+        } catch (e) {}
+    }
             const s = String(value).trim();
             // yyyy-mm-dd hoặc yyyy/mm/dd
             let m = s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
@@ -1693,19 +1703,30 @@
             const file = e.target.files[0]; if(!file) return;
             const reader = new FileReader();
             reader.onload = function(ev) {
-                const workbook = XLSX.read(new Uint8Array(ev.target.result), {type: 'array', cellDates: true});
+                const workbook = XLSX.read(new Uint8Array(ev.target.result), {type: 'array', cellDates: false});
                 const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
                 let customers = dbGet('customers'), records = dbGet('records'), successCount = 0, skipCount = 0;
                 json.forEach(row => {
-                    let rawDate = row["Ngay"] || row["Ngày"], cName = row["Ten Khach Hang"] || row["Khách Hàng"], typeRaw = row["Loai Da (vien/bi/uop/ngo/bao)"] || row["Loại Đá"], qty = row["So Luong"] || row["Số Lượng"], status = row["Trang Thai (Da thanh toan/Chua thanh toan)"] || row["Trạng Thái"] || "Chưa thanh toán", note = row["Ghi Chu"] || row["Ghi Chú"] || "";
-                    let date = normalizeImportDate(rawDate);
+                    let rawDate = row["Ngay"] || row["Ngày"],
+    cName = row["Ten Khach Hang"] || row["Khách Hàng"],
+    typeRaw = row["Loai Da (vien/bi/uop/ngo/bao)"] || row["Loại Đá"],
+    qty = row["So Luong"] || row["Số Lượng"],
+    status = row["Trang Thai (Da thanh toan/Chua thanh toan)"] || row["Trạng Thái"] || "Chưa thanh toán",
+    note = row["Ghi Chu"] || row["Ghi Chú"] || "";
+
+alert(
+    "rawDate = " + rawDate +
+    "\nType = " + typeof rawDate
+);
+
+let date = normalizeImportDate(rawDate);
                     if(date && cName && typeRaw && qty) {
                         let c = customers.find(x => x.name.toLowerCase() === String(cName).trim().toLowerCase() && !x.isDeleted);
                         if(c) {
                             let tLow = String(typeRaw).toLowerCase(), iceType = 'vien';
                             if(tLow.includes('bi')) iceType = 'bi'; else if(tLow.includes('uop')) iceType = 'uop'; else if(tLow.includes('ngo')) iceType = 'ngo'; else if(tLow.includes('bao')) iceType = 'bao';
                             let price = c.prices[iceType];
-                            if(price) { records.push({ id: Date.now().toString()+Math.random(), date, custId: c.id, custNameSnapshot: c.name, iceType, quantity: parseInt(qty), price, totalMoney: price * parseInt(qty), status, note, createdBy: currentUser.username, isDeleted: false }); successCount++; }
+                            if(price) { records.push({ id: 'rec_' + Date.now() + '_' + Math.random().toString(36).substring(2,8), date, custId: c.id, custNameSnapshot: c.name, iceType, quantity: parseInt(qty), price, totalMoney: price * parseInt(qty), status, note, createdBy: currentUser.username, isDeleted: false }); successCount++; }
                             else skipCount++;
                         } else skipCount++;
                     } else if (rawDate || cName || typeRaw || qty) skipCount++;
@@ -1750,7 +1771,7 @@
         }
         function loadTrash() {
             const tbody = document.getElementById('body-trash'); tbody.innerHTML = '';
-            const recs = dbGet('records').filter(r => r.isDeleted), custs = dbGet('customers').filter(c => r => r.isDeleted);
+            const recs = dbGet('records').filter(r => r.isDeleted); const custs = dbGet('customers').filter(c => c.isDeleted);
             recs.forEach(r => { tbody.innerHTML += `<tr><td>[Giao Dịch] Ngày ${r.date} - Khách: ${r.custNameSnapshot} - ${formatMoney(r.totalMoney)}đ</td><td style="font-size:12px;">Xóa bởi: <b>${r.deletedBy}</b><br>Lúc: ${r.deleteTime}</td><td><button class="btn btn-success" style="font-size:11px;" onclick="restoreItem('records', '${r.id}')">Khôi phục</button></td></tr>`; });
             custs.forEach(c => { tbody.innerHTML += `<tr><td>[Khách Hàng] Tên: ${c.name}</td><td style="font-size:12px;">Xóa bởi: <b>${c.deletedBy}</b><br>Lúc: ${c.deleteTime}</td><td><button class="btn btn-success" style="font-size:11px;" onclick="restoreItem('customers', '${c.id}')">Khôi phục</button></td></tr>`; });
         }
